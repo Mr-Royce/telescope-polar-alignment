@@ -65,25 +65,29 @@ h1 {
 #arrow-up {
     left: 50%;
     transform: translateX(-50%);
-    top: 0; /* Dynamic positioning will adjust this */
+    top: -30px; /* Starting position, will adjust dynamically */
 }
 
 #arrow-down {
     left: 50%;
     transform: translateX(-50%);
-    bottom: 0; /* Dynamic positioning will adjust this */
+    bottom: -30px; /* Starting position, will adjust dynamically */
 }
 
 #arrow-left {
     top: 50%;
     transform: translateY(-50%);
-    left: 0; /* Dynamic positioning will adjust this */
+    left: -30px; /* Starting position, will adjust dynamically */
+    unicode-bidi: bidi-override;
+    direction: rtl; /* Ensure arrow points left */
 }
 
 #arrow-right {
     top: 50%;
     transform: translateY(-50%);
-    right: 0; /* Dynamic positioning will adjust this */
+    right: -30px; /* Starting position, will adjust dynamically */
+    unicode-bidi: bidi-override;
+    direction: ltr; /* Ensure arrow points right */
 }
 
 .confirm-overlay {
