@@ -31,15 +31,25 @@ function getLocation() {
     }
 }
 
+// Show calibration confirmation
+function showCalibrationConfirm() {
+    const confirmOverlay = document.getElementById('calibration-confirm');
+    confirmOverlay.style.display = 'block';
+    setTimeout(() => {
+        confirmOverlay.style.display = 'none';
+    }, 2000); // Hide after 2 seconds
+}
+
 // Calibration function
 function calibrate(event) {
     if (event && event.alpha !== null && event.beta !== null) {
         azimuthOffset = event.alpha;  // Set current azimuth as zero point
         altitudeOffset = event.beta;  // Set current altitude as zero point
         isCalibrated = true;
+        showCalibrationConfirm();
         document.getElementById('status').textContent =
             'Status: Calibrated! Now align your telescope.';
-        document.getElementById('calibrate-btn').disabled = true; // Disable button after calibration
+        document.getElementById('calibrate-btn').disabled = true;
     } else {
         document.getElementById('status').textContent =
             'Status: Calibration failed. No sensor data available.';
@@ -52,11 +62,16 @@ function handleOrientation(event) {
     const beta = event.beta;   // Front-back tilt (-90° to 90°)
     const gamma = event.gamma; // Left-right tilt (-90° to 90°)
 
+    if (alpha === null || beta === null) {
+        document.getElementById('status').textContent = 'Status: No sensor data.';
+        return;
+    }
+
     // Apply calibration offsets
     let azimuth = alpha - azimuthOffset;
     let altitude = beta - altitudeOffset;
 
-    // Normalize azimuth to stay within -180° to 180°
+    // Normalize azimuth to -180° to 180°
     if (azimuth > 180) azimuth -= 360;
     if (azimuth < -180) azimuth += 360;
 
@@ -82,6 +97,7 @@ function handleOrientation(event) {
         arrows.left.style.display = 'none';
         arrows.right.style.display = 'none';
 
+        // Check alignment
         if (Math.abs(azimuth) < azimuthTolerance && Math.abs(altitude - targetAltitude) < altitudeTolerance) {
             status = `Aligned! Pointing near ${(targetAltitude > 0) ? 'Polaris' : 'Southern pole'}.`;
         } else {
