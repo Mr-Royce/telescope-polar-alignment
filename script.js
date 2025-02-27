@@ -37,14 +37,14 @@ function showCalibrationConfirm() {
     confirmOverlay.style.display = 'block';
     setTimeout(() => {
         confirmOverlay.style.display = 'none';
-    }, 2000); // Hide after 2 seconds
+    }, 2000);
 }
 
 // Calibration function
 function calibrate(event) {
     if (event && event.alpha !== null && event.beta !== null) {
-        azimuthOffset = event.alpha;  // Set current azimuth as zero point
-        altitudeOffset = event.beta;  // Set current altitude as zero point
+        azimuthOffset = event.alpha;
+        altitudeOffset = event.beta;
         isCalibrated = true;
         showCalibrationConfirm();
         document.getElementById('status').textContent =
@@ -83,6 +83,7 @@ function handleOrientation(event) {
     if (isCalibrated) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
+        const maxDistance = 50; // Max arrow distance in pixels from reticle edge
         let status = '';
         const arrows = {
             up: document.getElementById('arrow-up'),
@@ -91,7 +92,7 @@ function handleOrientation(event) {
             right: document.getElementById('arrow-right')
         };
 
-        // Reset arrow visibility
+        // Reset arrow visibility and position
         arrows.up.style.display = 'none';
         arrows.down.style.display = 'none';
         arrows.left.style.display = 'none';
@@ -102,22 +103,30 @@ function handleOrientation(event) {
             status = `Aligned! Pointing near ${(targetAltitude > 0) ? 'Polaris' : 'Southern pole'}.`;
         } else {
             status = 'Adjust telescope: ';
-            // Fixed: Swap left/right logic
+            // Reversed again: Positive azimuth = turn left, Negative = turn right
             if (azimuth > azimuthTolerance) {
-                status += 'Turn right '; // Positive azimuth = turn right to reduce
-                arrows.right.style.display = 'block';
+                status += 'Turn left ';
+                arrows.left.style.display = 'block';
+                const leftDistance = Math.min(Math.abs(azimuth) * 2, maxDistance);
+                arrows.left.style.left = `${-leftDistance}px`;
             }
             if (azimuth < -azimuthTolerance) {
-                status += 'Turn left ';  // Negative azimuth = turn left to increase
-                arrows.left.style.display = 'block';
+                status += 'Turn right ';
+                arrows.right.style.display = 'block';
+                const rightDistance = Math.min(Math.abs(azimuth) * 2, maxDistance);
+                arrows.right.style.right = `${-rightDistance}px`;
             }
             if (altitude < targetAltitude - altitudeTolerance) {
                 status += 'Tilt up ';
                 arrows.up.style.display = 'block';
+                const upDistance = Math.min(Math.abs(altitude - targetAltitude) * 2, maxDistance);
+                arrows.up.style.top = `${-upDistance}px`;
             }
             if (altitude > targetAltitude + altitudeTolerance) {
                 status += 'Tilt down ';
                 arrows.down.style.display = 'block';
+                const downDistance = Math.min(Math.abs(altitude - targetAltitude) * 2, maxDistance);
+                arrows.down.style.bottom = `${-downDistance}px`;
             }
         }
         document.getElementById('status').textContent = `Status: ${status}`;
