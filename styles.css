@@ -63,30 +63,29 @@ h1 {
 }
 
 #arrow-up {
-    top: 0;
     left: 50%;
     transform: translateX(-50%);
+    top: 0; /* Dynamic positioning will adjust this */
 }
 
 #arrow-down {
-    bottom: 0;
     left: 50%;
     transform: translateX(-50%);
+    bottom: 0; /* Dynamic positioning will adjust this */
 }
 
 #arrow-left {
-    left: 0;
     top: 50%;
     transform: translateY(-50%);
+    left: 0; /* Dynamic positioning will adjust this */
 }
 
 #arrow-right {
-    right: 0;
     top: 50%;
     transform: translateY(-50%);
+    right: 0; /* Dynamic positioning will adjust this */
 }
 
-/* Calibration confirmation overlay */
 .confirm-overlay {
     position: fixed;
     top: 50%;
