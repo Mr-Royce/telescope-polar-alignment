@@ -102,13 +102,14 @@ function handleOrientation(event) {
             status = `Aligned! Pointing near ${(targetAltitude > 0) ? 'Polaris' : 'Southern pole'}.`;
         } else {
             status = 'Adjust telescope: ';
+            // Fixed: Swap left/right logic
             if (azimuth > azimuthTolerance) {
-                status += 'Turn left ';
-                arrows.left.style.display = 'block';
+                status += 'Turn right '; // Positive azimuth = turn right to reduce
+                arrows.right.style.display = 'block';
             }
             if (azimuth < -azimuthTolerance) {
-                status += 'Turn right ';
-                arrows.right.style.display = 'block';
+                status += 'Turn left ';  // Negative azimuth = turn left to increase
+                arrows.left.style.display = 'block';
             }
             if (altitude < targetAltitude - altitudeTolerance) {
                 status += 'Tilt up ';
