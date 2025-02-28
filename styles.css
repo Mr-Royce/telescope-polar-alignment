@@ -15,14 +15,26 @@ h1 {
     font-size: 18px;
 }
 
-#calibrate-btn {
+#location-btn, #calibrate-btn {
     padding: 10px 20px;
     font-size: 16px;
-    background-color: #4CAF50;
+    margin: 5px;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+}
+
+#location-btn {
+    background-color: #2196F3; /* Blue for location */
+}
+
+#location-btn:hover {
+    background-color: #1976D2;
+}
+
+#calibrate-btn {
+    background-color: #4CAF50; /* Green for calibrate */
 }
 
 #calibrate-btn:hover {
@@ -38,7 +50,7 @@ h1 {
 
 .crosshair {
     position: absolute;
-    background-color: #00ff00; /* Fixed reticle in green */
+    background-color: #00ff00;
 }
 
 .crosshair.vertical {
@@ -67,7 +79,7 @@ h1 {
     position: absolute;
     width: 2px;
     height: 100%;
-    background-color: #ff0000; /* Red target crosshair */
+    background-color: #ff0000;
     left: 50%;
     transform: translateX(-50%);
 }
