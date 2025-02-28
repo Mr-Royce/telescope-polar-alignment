@@ -132,22 +132,23 @@ function handleOrientation(event) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
         const reticleSize = 150; // Reticle width/height in pixels
-        const maxOffset = reticleSize / 2 - 10; // Keep crosshair 10px from edge
+        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 1.5 : 1;
+        const maxOffset = (reticleSize / 2 - 10) / scaleFactor; // Adjust bounds for zoom
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
         let status = '';
         const targetCrosshair = document.getElementById('target-crosshair');
         const reticle = document.getElementById('reticle');
 
-        // Calculate position offsets based on error
-        let azimuthError = azimuth;
+        // Calculate position offsets based on error (reverse azimuth direction)
+        let azimuthError = -azimuth; // Reversed: positive azimuth moves left
         let altitudeError = altitude - targetAltitude;
 
         // Move target crosshair with separate scaling
         let xOffset = azimuthError * azScale;
         let yOffset = altitudeError * altScale;
 
-        // Cap offsets to stay within reticle bounds
+        // Cap offsets to stay within reticle bounds, adjusted for zoom
         xOffset = Math.max(-maxOffset, Math.min(maxOffset, xOffset));
         yOffset = Math.max(-maxOffset, Math.min(maxOffset, yOffset));
 
