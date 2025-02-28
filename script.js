@@ -62,35 +62,15 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (fetches location if needed, then calibrates)
+// Calibration function (uses existing targetAltitude, no auto-fetch here)
 function calibrate(event) {
     if (event && event.alpha !== null && event.beta !== null) {
-        if (targetAltitude === 37 && document.getElementById('instructions').textContent.includes('Default')) {
-            getLocation((success) => {
-                if (success) {
-                    azimuthOffset = event.alpha;
-                    altitudeOffset = event.beta;
-                    isCalibrated = true;
-                    showCalibrationConfirm();
-                    document.getElementById('status').textContent =
-                        'Status: Calibrated! Now align your telescope.';
-                } else {
-                    azimuthOffset = event.alpha;
-                    altitudeOffset = event.beta;
-                    isCalibrated = true;
-                    showCalibrationConfirm();
-                    document.getElementById('status').textContent =
-                        'Status: Calibrated with default 37°! Now align your telescope.';
-                }
-            });
-        } else {
-            azimuthOffset = event.alpha;
-            altitudeOffset = event.beta;
-            isCalibrated = true;
-            showCalibrationConfirm();
-            document.getElementById('status').textContent =
-                'Status: Calibrated! Now align your telescope.';
-        }
+        azimuthOffset = event.alpha;
+        altitudeOffset = event.beta;
+        isCalibrated = true;
+        showCalibrationConfirm();
+        document.getElementById('status').textContent =
+            'Status: Calibrated! Now align your telescope.';
     } else {
         document.getElementById('status').textContent =
             'Status: Calibration failed. No sensor data available.';
@@ -179,7 +159,7 @@ function handleOrientation(event) {
     }
 }
 
-// Setup event listeners
+// Setup event listeners and auto-fetch location
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.body.addEventListener('click', function() {
         DeviceOrientationEvent.requestPermission()
@@ -192,6 +172,8 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                     document.getElementById('location-btn').addEventListener('click', () => {
                         getLocation();
                     });
+                    // Auto-fetch location on load
+                    getLocation();
                 } else {
                     alert('Sensor permission denied.');
                 }
@@ -206,4 +188,6 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.getElementById('location-btn').addEventListener('click', () => {
         getLocation();
     });
+    // Auto-fetch location on load
+    getLocation();
 }
