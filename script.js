@@ -5,7 +5,7 @@ let isCalibrated = false;
 let latestOrientation = null; // Store latest sensor data
 
 // Request geolocation and update target altitude
-function getLocation(callback) {
+function getLocation() {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             position => {
@@ -21,7 +21,6 @@ function getLocation(callback) {
                     `Place your phone flat on the telescope. (Latitude: ${latitude.toFixed(2)}°)`;
                 document.getElementById('status').textContent =
                     `Status: Location set to ${latitude.toFixed(2)}°.`;
-                if (callback) callback(true);
             },
             error => {
                 console.error('Geolocation error:', error);
@@ -42,7 +41,6 @@ function getLocation(callback) {
                 document.getElementById('status').textContent = errorMessage;
                 document.getElementById('instructions').textContent =
                     'Place your phone flat on the telescope. (Default: 37°)';
-                if (callback) callback(false);
             }
         );
     } else {
@@ -50,7 +48,6 @@ function getLocation(callback) {
             'Status: Geolocation not supported. Using default 37°.';
         document.getElementById('instructions').textContent =
             'Place your phone flat on the telescope. (Default: 37°)';
-        if (callback) callback(false);
     }
 }
 
@@ -63,27 +60,35 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (one-click with immediate fallback)
+// Calibration function (one-click with immediate action)
 function calibrate() {
-    function attemptCalibration(event) {
-        if (event && event.alpha !== null && event.beta !== null) {
-            azimuthOffset = event.alpha;
-            altitudeOffset = event.beta;
-            isCalibrated = true;
-            showCalibrationConfirm();
-            document.getElementById('status').textContent =
-                'Status: Calibrated! Now align your telescope.';
-            getLocation(); // Fetch location in background
-            window.removeEventListener('deviceorientation', attemptCalibration); // Clean up
-        }
-    }
-
     if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-        attemptCalibration(latestOrientation); // Use latest data if available
+        // Immediate calibration with latest data
+        azimuthOffset = latestOrientation.alpha;
+        altitudeOffset = latestOrientation.beta;
+        isCalibrated = true;
+        getLocation(); // Fetch location immediately
+        showCalibrationConfirm();
+        document.getElementById('status').textContent =
+            'Status: Calibrated! Now align your telescope.';
     } else {
         document.getElementById('status').textContent =
-            'Status: Waiting for sensor data... Move the phone to calibrate.';
-        window.addEventListener('deviceorientation', attemptCalibration, { once: true }); // One-shot listener
+            'Status: Enabling sensors... Move the phone to calibrate.';
+        const waitForData = (event) => {
+            if (event.alpha !== null && event.beta !== null) {
+                azimuthOffset = event.alpha;
+                altitudeOffset = event.beta;
+                isCalibrated = true;
+                getLocation(); // Fetch location immediately
+                showCalibrationConfirm();
+                document.getElementById('status').textContent =
+                    'Status: Calibrated! Now align your telescope.';
+                window.removeEventListener('deviceorientation', waitForData);
+                // Force an immediate update
+                handleOrientation(event);
+            }
+        };
+        window.addEventListener('deviceorientation', waitForData, { once: true });
     }
 }
 
@@ -126,7 +131,7 @@ function handleOrientation(event) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
         const reticleSize = 150; // Reticle width/height in pixels
-        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 5 : 1; // Example high zoom (adjust as needed)
+        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 5 : 1; // Your high zoom (e.g., 5x)
         const maxOffsetBound = reticleSize / 2 - 10; // Fixed max bound (65px)
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
@@ -142,7 +147,7 @@ function handleOrientation(event) {
         let xOffset = azimuthError * azScale;
         let yOffset = altitudeError * altScale;
 
-        // Cap offsets to stay within unscaled reticle bounds (65px), then scale
+        // Cap offsets to stay within unscaled reticle bounds (65px), adjusted for zoom
         const scaledMaxOffset = maxOffsetBound / scaleFactor; // Adjust for zoom
         xOffset = Math.max(-scaledMaxOffset, Math.min(scaledMaxOffset, xOffset));
         yOffset = Math.max(-scaledMaxOffset, Math.min(scaledMaxOffset, yOffset));
