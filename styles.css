@@ -95,11 +95,6 @@ h1 {
     transform: translateY(-50%);
 }
 
-#az-countdown, #alt-countdown {
-    font-size: 14px;
-    color: #ff5555; /* Light red to stand out */
-}
-
 .confirm-overlay {
     position: fixed;
     top: 50%;
