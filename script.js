@@ -118,7 +118,7 @@ function handleOrientation(event) {
     if (isCalibrated) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
-        const reticleSize = 150; // Reticle width/height in pixels
+        const reticleSize = 100; // Reticle width/height in pixels
         const maxOffset = reticleSize / 2 - 10; // Keep crosshair 10px from edge
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
