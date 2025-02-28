@@ -76,7 +76,6 @@ function calibrate() {
     } else {
         document.getElementById('status').textContent =
             'Status: Waiting for sensor data... Move the phone to calibrate.';
-        // Wait for first valid data
         const waitForData = (event) => {
             if (event.alpha !== null && event.beta !== null) {
                 azimuthOffset = event.alpha;
@@ -132,7 +131,7 @@ function handleOrientation(event) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
         const reticleSize = 150; // Reticle width/height in pixels
-        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 1.5 : 1;
+        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 2 : 1; // Increased zoom
         const maxOffset = (reticleSize / 2 - 10) / scaleFactor; // Adjust bounds for zoom
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
@@ -140,7 +139,7 @@ function handleOrientation(event) {
         const targetCrosshair = document.getElementById('target-crosshair');
         const reticle = document.getElementById('reticle');
 
-        // Calculate position offsets based on error (original azimuth direction)
+        // Calculate position offsets based on error
         let azimuthError = azimuth; // Positive moves right, negative moves left
         let altitudeError = altitude - targetAltitude;
 
@@ -158,9 +157,11 @@ function handleOrientation(event) {
 
         // Zoom logic: Scale reticle when within 3° on both axes
         if (Math.abs(azimuth) <= zoomThreshold && Math.abs(altitude - targetAltitude) <= zoomThreshold) {
-            reticle.style.transform = 'scale(1.5)';
+            reticle.style.transform = 'scale(2)'; // Increased to 2x
+            reticle.classList.add('zoomed'); // Apply thinner lines
         } else {
             reticle.style.transform = 'scale(1)';
+            reticle.classList.remove('zoomed'); // Restore normal thickness
         }
 
         // Check alignment
