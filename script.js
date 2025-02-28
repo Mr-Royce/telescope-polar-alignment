@@ -63,32 +63,27 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (waits for first valid data if needed)
+// Calibration function (one-click with immediate fallback)
 function calibrate() {
+    function attemptCalibration(event) {
+        if (event && event.alpha !== null && event.beta !== null) {
+            azimuthOffset = event.alpha;
+            altitudeOffset = event.beta;
+            isCalibrated = true;
+            showCalibrationConfirm();
+            document.getElementById('status').textContent =
+                'Status: Calibrated! Now align your telescope.';
+            getLocation(); // Fetch location in background
+            window.removeEventListener('deviceorientation', attemptCalibration); // Clean up
+        }
+    }
+
     if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-        azimuthOffset = latestOrientation.alpha;
-        altitudeOffset = latestOrientation.beta;
-        isCalibrated = true;
-        showCalibrationConfirm();
-        document.getElementById('status').textContent =
-            'Status: Calibrated! Now align your telescope.';
-        getLocation(); // Fetch location in background
+        attemptCalibration(latestOrientation); // Use latest data if available
     } else {
         document.getElementById('status').textContent =
             'Status: Waiting for sensor data... Move the phone to calibrate.';
-        const waitForData = (event) => {
-            if (event.alpha !== null && event.beta !== null) {
-                azimuthOffset = event.alpha;
-                altitudeOffset = event.beta;
-                isCalibrated = true;
-                showCalibrationConfirm();
-                document.getElementById('status').textContent =
-                    'Status: Calibrated! Now align your telescope.';
-                getLocation(); // Fetch location in background
-                window.removeEventListener('deviceorientation', waitForData);
-            }
-        };
-        window.addEventListener('deviceorientation', waitForData);
+        window.addEventListener('deviceorientation', attemptCalibration, { once: true }); // One-shot listener
     }
 }
 
@@ -131,8 +126,8 @@ function handleOrientation(event) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
         const reticleSize = 150; // Reticle width/height in pixels
-        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 3 : 1; // Your high zoom (e.g., 3x)
-        const maxOffset = (reticleSize / 2 - 10) / scaleFactor; // Adjusted pre-scale offset
+        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 5 : 1; // Example high zoom (adjust as needed)
+        const maxOffsetBound = reticleSize / 2 - 10; // Fixed max bound (65px)
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
         let status = '';
@@ -147,9 +142,10 @@ function handleOrientation(event) {
         let xOffset = azimuthError * azScale;
         let yOffset = altitudeError * altScale;
 
-        // Cap offsets to stay within unscaled reticle bounds, adjusted for zoom
-        xOffset = Math.max(-maxOffset, Math.min(maxOffset, xOffset));
-        yOffset = Math.max(-maxOffset, Math.min(maxOffset, yOffset));
+        // Cap offsets to stay within unscaled reticle bounds (65px), then scale
+        const scaledMaxOffset = maxOffsetBound / scaleFactor; // Adjust for zoom
+        xOffset = Math.max(-scaledMaxOffset, Math.min(scaledMaxOffset, xOffset));
+        yOffset = Math.max(-scaledMaxOffset, Math.min(scaledMaxOffset, yOffset));
 
         // Ensure target crosshair is visible and bounded
         targetCrosshair.style.display = 'block';
@@ -157,7 +153,7 @@ function handleOrientation(event) {
 
         // Zoom logic: Scale reticle when within 3° on both axes
         if (Math.abs(azimuth) <= zoomThreshold && Math.abs(altitude - targetAltitude) <= zoomThreshold) {
-            reticle.style.transform = 'scale(3)'; // Your high zoom (e.g., 3x)
+            reticle.style.transform = 'scale(5)'; // Your high zoom (e.g., 5x)
             reticle.classList.add('zoomed'); // Apply thinner lines
         } else {
             reticle.style.transform = 'scale(1)';
