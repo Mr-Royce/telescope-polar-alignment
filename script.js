@@ -62,15 +62,28 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (uses existing targetAltitude, no auto-fetch here)
+// Calibration function (fetches location and calibrates in one step)
 function calibrate(event) {
     if (event && event.alpha !== null && event.beta !== null) {
-        azimuthOffset = event.alpha;
-        altitudeOffset = event.beta;
-        isCalibrated = true;
-        showCalibrationConfirm();
-        document.getElementById('status').textContent =
-            'Status: Calibrated! Now align your telescope.';
+        // Fetch location if not already set
+        if (!isCalibrated) {
+            getLocation((success) => {
+                azimuthOffset = event.alpha;
+                altitudeOffset = event.beta;
+                isCalibrated = true;
+                showCalibrationConfirm();
+                document.getElementById('status').textContent =
+                    success ? 'Status: Calibrated! Now align your telescope.' :
+                              'Status: Calibrated with default 37°! Now align your telescope.';
+            });
+        } else {
+            // Recalibrate with existing location
+            azimuthOffset = event.alpha;
+            altitudeOffset = event.beta;
+            showCalibrationConfirm();
+            document.getElementById('status').textContent =
+                'Status: Calibrated! Now align your telescope.';
+        }
     } else {
         document.getElementById('status').textContent =
             'Status: Calibration failed. No sensor data available.';
@@ -98,15 +111,21 @@ function handleOrientation(event) {
     if (azimuth > 180) azimuth -= 360;
     if (azimuth < -180) azimuth += 360;
 
-    // Update display
-    document.getElementById('azimuth').textContent = `Azimuth: ${azimuth.toFixed(1)}°`;
-    document.getElementById('altitude').textContent = `Altitude: ${altitude.toFixed(1)}°`;
+    // Calculate altitude countdown
+    const altitudeRemaining = Math.abs(altitude - targetAltitude);
+
+    // Determine precision based on zoom state
+    const zoomThreshold = 3;
+    const precision = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 2 : 1;
+
+    // Update display (altitude as countdown)
+    document.getElementById('azimuth').textContent = `Azimuth: ${azimuth.toFixed(precision)}°`;
+    document.getElementById('altitude').textContent = `Altitude remaining: ${altitudeRemaining.toFixed(precision)}°`;
 
     // Alignment logic (only if calibrated)
     if (isCalibrated) {
-        const azimuthTolerance = 1;
-        const altitudeTolerance = 1;
-        const zoomThreshold = 3;
+        const azimuthTolerance = 5;
+        const altitudeTolerance = 5;
         const maxOffset = 75;
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
@@ -159,7 +178,7 @@ function handleOrientation(event) {
     }
 }
 
-// Setup event listeners and auto-fetch location
+// Setup event listeners (no auto-fetch on load)
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.body.addEventListener('click', function() {
         DeviceOrientationEvent.requestPermission()
@@ -172,8 +191,6 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                     document.getElementById('location-btn').addEventListener('click', () => {
                         getLocation();
                     });
-                    // Auto-fetch location on load
-                    getLocation();
                 } else {
                     alert('Sensor permission denied.');
                 }
@@ -188,6 +205,4 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.getElementById('location-btn').addEventListener('click', () => {
         getLocation();
     });
-    // Auto-fetch location on load
-    getLocation();
 }
