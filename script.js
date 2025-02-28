@@ -116,13 +116,13 @@ function handleOrientation(event) {
     if (azimuth > 180) azimuth -= 360;
     if (azimuth < -180) azimuth += 360;
 
-    // Update display with countdowns
+    // Update display with countdowns (always show, even pre-calibration)
     document.getElementById('azimuth').textContent = `Azimuth: ${azimuth.toFixed(1)}°`;
     document.getElementById('altitude').textContent = `Altitude: ${altitude.toFixed(1)}°`;
     const azCountdown = Math.abs(azimuth);
     const altCountdown = Math.abs(altitude - targetAltitude);
     document.getElementById('az-countdown').textContent = `(remaining: ${azCountdown.toFixed(1)}°)`;
-    document.getElementById('alt-countdown').textContent = `(remaining: ${altCountdown.toFixed(1)}°)`; 
+    document.getElementById('alt-countdown').textContent = `(remaining: ${altCountdown.toFixed(1)}°)`;
 
     // Alignment logic (only if calibrated)
     if (isCalibrated) {
@@ -148,6 +148,8 @@ function handleOrientation(event) {
         xOffset = Math.max(-maxOffset, Math.min(maxOffset, xOffset));
         yOffset = Math.max(-maxOffset, Math.min(maxOffset, yOffset));
 
+        // Ensure target crosshair is visible and moving
+        targetCrosshair.style.display = 'block'; // Force visibility
         targetCrosshair.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
 
         // Zoom logic: Scale reticle when within 3° on both axes
