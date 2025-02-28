@@ -38,7 +38,7 @@ h1 {
 
 .crosshair {
     position: absolute;
-    background-color: #00ff00;
+    background-color: #00ff00; /* Fixed reticle in green */
 }
 
 .crosshair.vertical {
@@ -55,39 +55,30 @@ h1 {
     transform: translateY(-50%);
 }
 
-.arrow {
+.target {
     position: absolute;
-    font-size: 30px;
-    color: #ff0000;
-    display: none;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
 }
 
-#arrow-up {
+.target-vertical {
+    position: absolute;
+    width: 2px;
+    height: 100%;
+    background-color: #ff0000; /* Red target crosshair */
     left: 50%;
     transform: translateX(-50%);
-    top: -30px; /* Starting position, will adjust dynamically */
 }
 
-#arrow-down {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: -30px; /* Starting position, will adjust dynamically */
-}
-
-#arrow-left {
+.target-horizontal {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background-color: #ff0000;
     top: 50%;
     transform: translateY(-50%);
-    left: -30px; /* Starting position, will adjust dynamically */
-    unicode-bidi: bidi-override;
-    direction: rtl; /* Ensure arrow points left */
-}
-
-#arrow-right {
-    top: 50%;
-    transform: translateY(-50%);
-    right: -30px; /* Starting position, will adjust dynamically */
-    unicode-bidi: bidi-override;
-    direction: ltr; /* Ensure arrow points right */
 }
 
 .confirm-overlay {
