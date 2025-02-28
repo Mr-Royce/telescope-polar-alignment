@@ -116,18 +116,22 @@ function handleOrientation(event) {
     if (azimuth > 180) azimuth -= 360;
     if (azimuth < -180) azimuth += 360;
 
-    // Update display
+    // Update display with countdowns
     document.getElementById('azimuth').textContent = `Azimuth: ${azimuth.toFixed(1)}°`;
     document.getElementById('altitude').textContent = `Altitude: ${altitude.toFixed(1)}°`;
+    const azCountdown = Math.abs(azimuth);
+    const altCountdown = Math.abs(altitude - targetAltitude);
+    document.getElementById('az-countdown').textContent = `(remaining: ${azCountdown.toFixed(1)}°)`;
+    document.getElementById('alt-countdown').textContent = `(remaining: ${altCountdown.toFixed(1)}°)`; 
 
     // Alignment logic (only if calibrated)
     if (isCalibrated) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
-        const zoomThreshold = 3; // Zoom when within 3°
-        const maxOffset = 75;    // Max pixels from center
-        const azScale = 2;       // Pixels per degree for azimuth (horizontal)
-        const altScale = 3;      // Pixels per degree for altitude (vertical)
+        const zoomThreshold = 3;
+        const maxOffset = 75;
+        const azScale = 2;  // Pixels per degree for azimuth
+        const altScale = 3; // Pixels per degree for altitude
         let status = '';
         const targetCrosshair = document.getElementById('target-crosshair');
         const reticle = document.getElementById('reticle');
@@ -137,8 +141,8 @@ function handleOrientation(event) {
         let altitudeError = altitude - targetAltitude;
 
         // Move target crosshair with separate scaling
-        let xOffset = azimuthError * azScale;   // Horizontal movement
-        let yOffset = altitudeError * altScale; // Vertical movement
+        let xOffset = azimuthError * azScale;
+        let yOffset = altitudeError * altScale;
 
         // Cap offsets
         xOffset = Math.max(-maxOffset, Math.min(maxOffset, xOffset));
