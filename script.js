@@ -161,10 +161,10 @@ function handleOrientation(event) {
         } else {
             status = 'Adjust telescope: ';
             if (azimuth > azimuthTolerance) {
-                status += 'Turn right ';
+                status += 'Turn left ';
             }
             if (azimuth < -azimuthTolerance) {
-                status += 'Turn left ';
+                status += 'Turn right ';
             }
             if (altitude < targetAltitude - altitudeTolerance) {
                 status += 'Tilt up ';
