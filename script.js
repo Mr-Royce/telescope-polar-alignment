@@ -71,11 +71,11 @@ function calibrate(event) {
         showCalibrationConfirm();
         document.getElementById('status').textContent =
             'Status: Calibrated! Now align your telescope.';
-        // Fetch location in background, doesn’t block calibration
+        // Fetch location in background
         getLocation();
     } else {
         document.getElementById('status').textContent =
-            'Status: Calibration failed. No sensor data available.';
+            'Status: Calibration failed. No sensor data available yet. Try again.';
     }
 }
 
@@ -115,7 +115,8 @@ function handleOrientation(event) {
     if (isCalibrated) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
-        const maxOffset = 75;
+        const reticleSize = 150; // Reticle width/height in pixels
+        const maxOffset = reticleSize / 2 - 10; // Keep crosshair 10px from edge
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
         let status = '';
@@ -130,11 +131,11 @@ function handleOrientation(event) {
         let xOffset = azimuthError * azScale;
         let yOffset = altitudeError * altScale;
 
-        // Cap offsets
+        // Cap offsets to stay within reticle bounds
         xOffset = Math.max(-maxOffset, Math.min(maxOffset, xOffset));
         yOffset = Math.max(-maxOffset, Math.min(maxOffset, yOffset));
 
-        // Ensure target crosshair is visible and moving
+        // Ensure target crosshair is visible and bounded
         targetCrosshair.style.display = 'block';
         targetCrosshair.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
 
@@ -167,16 +168,15 @@ function handleOrientation(event) {
     }
 }
 
-// Setup event listeners
+// Setup event listeners with persistent calibrate handler
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.body.addEventListener('click', function() {
         DeviceOrientationEvent.requestPermission()
             .then(response => {
                 if (response === 'granted') {
                     window.addEventListener('deviceorientation', handleOrientation);
-                    document.getElementById('calibrate-btn').addEventListener('click', () => {
-                        window.addEventListener('deviceorientation', calibrate, { once: true });
-                    });
+                    // Persistent calibrate listener, no { once: true }
+                    document.getElementById('calibrate-btn').addEventListener('click', calibrate);
                     document.getElementById('location-btn').addEventListener('click', () => {
                         getLocation();
                     });
@@ -188,9 +188,8 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     }, { once: true });
 } else {
     window.addEventListener('deviceorientation', handleOrientation);
-    document.getElementById('calibrate-btn').addEventListener('click', () => {
-        window.addEventListener('deviceorientation', calibrate, { once: true });
-    });
+    // Persistent calibrate listener, no { once: true }
+    document.getElementById('calibrate-btn').addEventListener('click', calibrate);
     document.getElementById('location-btn').addEventListener('click', () => {
         getLocation();
     });
