@@ -112,8 +112,8 @@ function handleOrientation(event) {
 
     // Alignment logic (only if calibrated)
     if (isCalibrated) {
-        const azimuthTolerance = 5;
-        const altitudeTolerance = 5;
+        const azimuthTolerance = 2;
+        const altitudeTolerance = 2;
         const reticleSize = 150; // Reticle width/height in pixels
         const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 5 : 1; // Your high zoom (e.g., 5x)
         const maxOffsetBound = reticleSize / 2 - 10; // Fixed max bound (65px)
