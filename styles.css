@@ -46,8 +46,8 @@ h1 {
     width: 150px;
     height: 150px;
     margin: 20px auto;
-    transform-origin: center; /* Ensure scaling happens from the center */
-    transition: transform 0.3s ease; /* Smooth zoom transition */
+    transform-origin: center;
+    transition: transform 0.3s ease;
 }
 
 .crosshair {
@@ -93,6 +93,11 @@ h1 {
     background-color: #ff0000;
     top: 50%;
     transform: translateY(-50%);
+}
+
+#az-countdown, #alt-countdown {
+    font-size: 14px;
+    color: #ff5555; /* Light red to stand out */
 }
 
 .confirm-overlay {
