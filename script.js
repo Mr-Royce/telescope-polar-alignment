@@ -142,7 +142,7 @@ function handleOrientation(event) {
 
         // Zoom logic: Scale reticle when within 3° on both axes
         if (Math.abs(azimuth) <= zoomThreshold && Math.abs(altitude - targetAltitude) <= zoomThreshold) {
-            reticle.style.transform = 'scale(5)'; // Your high zoom (e.g., 5x)
+            reticle.style.transform = 'scale(8)'; // Your high zoom (e.g., 5x)
             reticle.classList.add('zoomed'); // Apply thinner lines
         } else {
             reticle.style.transform = 'scale(1)';
