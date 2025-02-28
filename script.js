@@ -126,6 +126,8 @@ function handleOrientation(event) {
         const altitudeTolerance = 5;
         const zoomThreshold = 3; // Zoom when within 3°
         const maxOffset = 75;    // Max pixels from center
+        const azScale = 2;       // Pixels per degree for azimuth (horizontal)
+        const altScale = 3;      // Pixels per degree for altitude (vertical)
         let status = '';
         const targetCrosshair = document.getElementById('target-crosshair');
         const reticle = document.getElementById('reticle');
@@ -134,9 +136,9 @@ function handleOrientation(event) {
         let azimuthError = azimuth;
         let altitudeError = altitude - targetAltitude;
 
-        // Move target crosshair
-        let xOffset = azimuthError * 2;
-        let yOffset = altitudeError * 2;
+        // Move target crosshair with separate scaling
+        let xOffset = azimuthError * azScale;   // Horizontal movement
+        let yOffset = altitudeError * altScale; // Vertical movement
 
         // Cap offsets
         xOffset = Math.max(-maxOffset, Math.min(maxOffset, xOffset));
@@ -146,9 +148,9 @@ function handleOrientation(event) {
 
         // Zoom logic: Scale reticle when within 3° on both axes
         if (Math.abs(azimuth) <= zoomThreshold && Math.abs(altitude - targetAltitude) <= zoomThreshold) {
-            reticle.style.transform = 'scale(1.5)'; // Zoom to 150%
+            reticle.style.transform = 'scale(1.5)';
         } else {
-            reticle.style.transform = 'scale(1)'; // Normal size
+            reticle.style.transform = 'scale(1)';
         }
 
         // Check alignment
