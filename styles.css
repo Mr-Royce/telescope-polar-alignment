@@ -13,6 +13,8 @@ h1 {
 #instructions, #azimuth, #altitude, #status {
     margin: 10px 0;
     font-size: 18px;
+    position: relative;
+    z-index: 10; /* Above reticle */
 }
 
 #location-btn, #calibrate-btn {
@@ -23,6 +25,8 @@ h1 {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    position: relative;
+    z-index: 10; /* Above reticle */
 }
 
 #location-btn {
@@ -48,7 +52,8 @@ h1 {
     margin: 20px auto;
     transform-origin: center;
     transition: transform 0.3s ease;
-    overflow: hidden; /* Prevent crosshair from escaping */
+    overflow: hidden; /* Clip crosshair */
+    z-index: 5; /* Below text/buttons */
 }
 
 .crosshair {
@@ -107,5 +112,5 @@ h1 {
     font-size: 24px;
     border-radius: 10px;
     display: none;
-    z-index: 1000;
+    z-index: 1000; /* Above everything */
 }
