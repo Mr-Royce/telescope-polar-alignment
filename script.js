@@ -1,5 +1,5 @@
 let targetAltitude = 37; // Default to 37° if location unavailable
-let azimuthOffset = 0;   // Calibration offset for azimuth
+let azimuthOffset = 0;   // Calibration offset for azimuth (compass North)
 let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
 let latestOrientation = null; // Store latest sensor data
@@ -63,12 +63,13 @@ function showCalibrationConfirm() {
 // Calibration function (sets offsets and starts alignment)
 function calibrate() {
     if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-        azimuthOffset = latestOrientation.alpha;
+        // Use alpha as compass heading relative to North at calibration
+        azimuthOffset = latestOrientation.alpha; // Assumes phone faces North when calibrated
         altitudeOffset = latestOrientation.beta;
         isCalibrated = true;
         showCalibrationConfirm();
         document.getElementById('status').textContent =
-            'Status: Calibrated! Now align your telescope.';
+            'Status: Calibrated! Point phone North, then align your telescope.';
         getLocation(); // Fetch location
         handleOrientation(latestOrientation); // Force immediate UI update
     } else {
@@ -85,19 +86,24 @@ function handleOrientation(event) {
     const beta = event.beta;   // Front-back tilt (-90° to 90°)
     const gamma = event.gamma; // Left-right tilt (-90° to 90°)
 
+    // Check for webkitCompassHeading (iOS)
+    const compassHeading = event.webkitCompassHeading !== undefined ? event.webkitCompassHeading : null;
+
     if (alpha === null || beta === null) {
         document.getElementById('azimuth').textContent = 'Azimuth: --°';
         document.getElementById('altitude').textContent = 'Altitude remaining: --°';
         return;
     }
 
-    // Apply calibration offsets (only if calibrated)
-    let azimuth = isCalibrated ? alpha - azimuthOffset : alpha;
-    let altitude = isCalibrated ? beta - altitudeOffset : beta;
+    // Use compass heading if available (iOS), otherwise adjust alpha
+    let azimuth = isCalibrated ? (compassHeading !== null ? compassHeading : alpha - azimuthOffset) : alpha;
 
     // Normalize azimuth to -180° to 180°
     if (azimuth > 180) azimuth -= 360;
     if (azimuth < -180) azimuth += 360;
+
+    // Apply calibration offset for altitude
+    let altitude = isCalibrated ? beta - altitudeOffset : beta;
 
     // Calculate altitude countdown
     const altitudeRemaining = Math.abs(altitude - targetAltitude);
@@ -112,8 +118,8 @@ function handleOrientation(event) {
 
     // Alignment logic (only if calibrated)
     if (isCalibrated) {
-        const azimuthTolerance = 1;
-        const altitudeTolerance = 1;
+        const azimuthTolerance = 5;
+        const altitudeTolerance = 5;
         const reticleSize = 150; // Reticle width/height in pixels
         const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 5 : 1; // Your high zoom (e.g., 5x)
         const maxOffsetBound = reticleSize / 2 - 10; // Fixed max bound (65px)
@@ -142,7 +148,7 @@ function handleOrientation(event) {
 
         // Zoom logic: Scale reticle when within 3° on both axes
         if (Math.abs(azimuth) <= zoomThreshold && Math.abs(altitude - targetAltitude) <= zoomThreshold) {
-            reticle.style.transform = 'scale(8)'; // Your high zoom (e.g., 5x)
+            reticle.style.transform = 'scale(5)'; // Your high zoom (e.g., 5x)
             reticle.classList.add('zoomed'); // Apply thinner lines
         } else {
             reticle.style.transform = 'scale(1)';
@@ -173,7 +179,6 @@ function handleOrientation(event) {
 
 // Setup event listeners with initial permission request
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    // Permission prompt on page load
     DeviceOrientationEvent.requestPermission()
         .then(response => {
             if (response === 'granted') {
