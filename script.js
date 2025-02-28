@@ -140,8 +140,8 @@ function handleOrientation(event) {
         const targetCrosshair = document.getElementById('target-crosshair');
         const reticle = document.getElementById('reticle');
 
-        // Calculate position offsets based on error (reverse azimuth direction)
-        let azimuthError = -azimuth; // Reversed: positive azimuth moves left
+        // Calculate position offsets based on error (original azimuth direction)
+        let azimuthError = azimuth; // Positive moves right, negative moves left
         let altitudeError = altitude - targetAltitude;
 
         // Move target crosshair with separate scaling
