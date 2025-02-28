@@ -48,6 +48,7 @@ h1 {
     margin: 20px auto;
     transform-origin: center;
     transition: transform 0.3s ease;
+    overflow: hidden; /* Prevent crosshair from escaping */
 }
 
 .crosshair {
