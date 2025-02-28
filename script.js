@@ -63,7 +63,7 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (one tap using latest data)
+// Calibration function (waits for first valid data if needed)
 function calibrate() {
     if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
         azimuthOffset = latestOrientation.alpha;
@@ -72,11 +72,24 @@ function calibrate() {
         showCalibrationConfirm();
         document.getElementById('status').textContent =
             'Status: Calibrated! Now align your telescope.';
-        // Fetch location in background
-        getLocation();
+        getLocation(); // Fetch location in background
     } else {
         document.getElementById('status').textContent =
-            'Status: No sensor data available yet. Move the phone and try again.';
+            'Status: Waiting for sensor data... Move the phone to calibrate.';
+        // Wait for first valid data
+        const waitForData = (event) => {
+            if (event.alpha !== null && event.beta !== null) {
+                azimuthOffset = event.alpha;
+                altitudeOffset = event.beta;
+                isCalibrated = true;
+                showCalibrationConfirm();
+                document.getElementById('status').textContent =
+                    'Status: Calibrated! Now align your telescope.';
+                getLocation(); // Fetch location in background
+                window.removeEventListener('deviceorientation', waitForData);
+            }
+        };
+        window.addEventListener('deviceorientation', waitForData);
     }
 }
 
@@ -118,7 +131,7 @@ function handleOrientation(event) {
     if (isCalibrated) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
-        const reticleSize = 100; // Reticle width/height in pixels
+        const reticleSize = 150; // Reticle width/height in pixels
         const maxOffset = reticleSize / 2 - 10; // Keep crosshair 10px from edge
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
