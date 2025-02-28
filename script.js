@@ -3,8 +3,8 @@ let azimuthOffset = 0;   // Calibration offset for azimuth
 let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
 
-// Request geolocation permission and set target altitude
-function getLocation() {
+// Request geolocation and update target altitude
+function getLocation(callback) {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             position => {
@@ -19,7 +19,8 @@ function getLocation() {
                 document.getElementById('instructions').textContent =
                     `Place your phone flat on the telescope. (Latitude: ${latitude.toFixed(2)}°)`;
                 document.getElementById('status').textContent =
-                    `Status: Location set to ${latitude.toFixed(2)}°. Calibrate to proceed.`;
+                    `Status: Location set to ${latitude.toFixed(2)}°.`;
+                if (callback) callback(true);
             },
             error => {
                 console.error('Geolocation error:', error);
@@ -40,6 +41,7 @@ function getLocation() {
                 document.getElementById('status').textContent = errorMessage;
                 document.getElementById('instructions').textContent =
                     'Place your phone flat on the telescope. (Default: 37°)';
+                if (callback) callback(false);
             }
         );
     } else {
@@ -47,6 +49,7 @@ function getLocation() {
             'Status: Geolocation not supported. Using default 37°.';
         document.getElementById('instructions').textContent =
             'Place your phone flat on the telescope. (Default: 37°)';
+        if (callback) callback(false);
     }
 }
 
@@ -59,16 +62,38 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function
+// Calibration function (fetches location if needed, then calibrates)
 function calibrate(event) {
     if (event && event.alpha !== null && event.beta !== null) {
-        azimuthOffset = event.alpha;
-        altitudeOffset = event.beta;
-        isCalibrated = true;
-        showCalibrationConfirm();
-        document.getElementById('status').textContent =
-            'Status: Calibrated! Now align your telescope.';
-        document.getElementById('calibrate-btn').disabled = true;
+        // If location hasn’t been set explicitly, fetch it first
+        if (targetAltitude === 37 && document.getElementById('instructions').textContent.includes('Default')) {
+            getLocation((success) => {
+                if (success) {
+                    azimuthOffset = event.alpha;
+                    altitudeOffset = event.beta;
+                    isCalibrated = true;
+                    showCalibrationConfirm();
+                    document.getElementById('status').textContent =
+                        'Status: Calibrated! Now align your telescope.';
+                } else {
+                    // Use default 37° and calibrate anyway
+                    azimuthOffset = event.alpha;
+                    altitudeOffset = event.beta;
+                    isCalibrated = true;
+                    showCalibrationConfirm();
+                    document.getElementById('status').textContent =
+                        'Status: Calibrated with default 37°! Now align your telescope.';
+                }
+            });
+        } else {
+            // Location already set, just calibrate
+            azimuthOffset = event.alpha;
+            altitudeOffset = event.beta;
+            isCalibrated = true;
+            showCalibrationConfirm();
+            document.getElementById('status').textContent =
+                'Status: Calibrated! Now align your telescope.';
+        }
     } else {
         document.getElementById('status').textContent =
             'Status: Calibration failed. No sensor data available.';
@@ -102,19 +127,19 @@ function handleOrientation(event) {
     if (isCalibrated) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
-        const maxOffset = 75; // Max pixels from center (half of reticle size)
+        const maxOffset = 75; // Max pixels from center
         let status = '';
         const targetCrosshair = document.getElementById('target-crosshair');
 
         // Calculate position offsets based on error
-        let azimuthError = azimuth; // Degrees deviation
+        let azimuthError = azimuth;
         let altitudeError = altitude - targetAltitude;
 
         // Move target crosshair
-        let xOffset = azimuthError * 2; // 2px per degree
+        let xOffset = azimuthError * 2;
         let yOffset = altitudeError * 2;
 
-        // Cap offsets to stay within reticle
+        // Cap offsets
         xOffset = Math.max(-maxOffset, Math.min(maxOffset, xOffset));
         yOffset = Math.max(-maxOffset, Math.min(maxOffset, yOffset));
 
@@ -152,7 +177,9 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                     document.getElementById('calibrate-btn').addEventListener('click', () => {
                         window.addEventListener('deviceorientation', calibrate, { once: true });
                     });
-                    getLocation();
+                    document.getElementById('location-btn').addEventListener('click', () => {
+                        getLocation();
+                    });
                 } else {
                     alert('Sensor permission denied.');
                 }
@@ -164,5 +191,7 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.getElementById('calibrate-btn').addEventListener('click', () => {
         window.addEventListener('deviceorientation', calibrate, { once: true });
     });
-    getLocation();
+    document.getElementById('location-btn').addEventListener('click', () => {
+        getLocation();
+    });
 }
