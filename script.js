@@ -65,7 +65,6 @@ function showCalibrationConfirm() {
 // Calibration function (fetches location if needed, then calibrates)
 function calibrate(event) {
     if (event && event.alpha !== null && event.beta !== null) {
-        // If location hasn’t been set explicitly, fetch it first
         if (targetAltitude === 37 && document.getElementById('instructions').textContent.includes('Default')) {
             getLocation((success) => {
                 if (success) {
@@ -76,7 +75,6 @@ function calibrate(event) {
                     document.getElementById('status').textContent =
                         'Status: Calibrated! Now align your telescope.';
                 } else {
-                    // Use default 37° and calibrate anyway
                     azimuthOffset = event.alpha;
                     altitudeOffset = event.beta;
                     isCalibrated = true;
@@ -86,7 +84,6 @@ function calibrate(event) {
                 }
             });
         } else {
-            // Location already set, just calibrate
             azimuthOffset = event.alpha;
             altitudeOffset = event.beta;
             isCalibrated = true;
@@ -127,9 +124,11 @@ function handleOrientation(event) {
     if (isCalibrated) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
-        const maxOffset = 75; // Max pixels from center
+        const zoomThreshold = 3; // Zoom when within 3°
+        const maxOffset = 75;    // Max pixels from center
         let status = '';
         const targetCrosshair = document.getElementById('target-crosshair');
+        const reticle = document.getElementById('reticle');
 
         // Calculate position offsets based on error
         let azimuthError = azimuth;
@@ -144,6 +143,13 @@ function handleOrientation(event) {
         yOffset = Math.max(-maxOffset, Math.min(maxOffset, yOffset));
 
         targetCrosshair.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+
+        // Zoom logic: Scale reticle when within 3° on both axes
+        if (Math.abs(azimuth) <= zoomThreshold && Math.abs(altitude - targetAltitude) <= zoomThreshold) {
+            reticle.style.transform = 'scale(1.5)'; // Zoom to 150%
+        } else {
+            reticle.style.transform = 'scale(1)'; // Normal size
+        }
 
         // Check alignment
         if (Math.abs(azimuth) < azimuthTolerance && Math.abs(altitude - targetAltitude) < altitudeTolerance) {
