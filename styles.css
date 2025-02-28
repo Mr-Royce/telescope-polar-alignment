@@ -26,7 +26,7 @@ h1 {
 }
 
 #location-btn {
-    background-color: #2196F3; /* Blue for location */
+    background-color: #2196F3;
 }
 
 #location-btn:hover {
@@ -34,7 +34,7 @@ h1 {
 }
 
 #calibrate-btn {
-    background-color: #4CAF50; /* Green for calibrate */
+    background-color: #4CAF50;
 }
 
 #calibrate-btn:hover {
@@ -46,6 +46,8 @@ h1 {
     width: 150px;
     height: 150px;
     margin: 20px auto;
+    transform-origin: center; /* Ensure scaling happens from the center */
+    transition: transform 0.3s ease; /* Smooth zoom transition */
 }
 
 .crosshair {
