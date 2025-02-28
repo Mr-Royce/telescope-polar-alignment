@@ -105,12 +105,12 @@ h1 {
 
 #reticle.zoomed .crosshair.vertical,
 #reticle.zoomed .target-vertical {
-    width: .75px; /* Thinner when zoomed */
+    width: .5px; /* Thinner when zoomed */
 }
 
 #reticle.zoomed .crosshair.horizontal,
 #reticle.zoomed .target-horizontal {
-    height: .75px; /* Thinner when zoomed */
+    height: .5px; /* Thinner when zoomed */
 }
 
 #bottom-text {
