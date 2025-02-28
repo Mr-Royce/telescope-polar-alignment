@@ -67,13 +67,21 @@ function calibrate(event) {
     if (event && event.alpha !== null && event.beta !== null) {
         if (targetAltitude === 37 && document.getElementById('instructions').textContent.includes('Default')) {
             getLocation((success) => {
-                azimuthOffset = event.alpha;
-                altitudeOffset = event.beta;
-                isCalibrated = true;
-                showCalibrationConfirm();
-                document.getElementById('status').textContent =
-                    success ? 'Status: Calibrated! Now align your telescope.' :
-                              'Status: Calibrated with default 37°! Now align your telescope.';
+                if (success) {
+                    azimuthOffset = event.alpha;
+                    altitudeOffset = event.beta;
+                    isCalibrated = true;
+                    showCalibrationConfirm();
+                    document.getElementById('status').textContent =
+                        'Status: Calibrated! Now align your telescope.';
+                } else {
+                    azimuthOffset = event.alpha;
+                    altitudeOffset = event.beta;
+                    isCalibrated = true;
+                    showCalibrationConfirm();
+                    document.getElementById('status').textContent =
+                        'Status: Calibrated with default 37°! Now align your telescope.';
+                }
             });
         } else {
             azimuthOffset = event.alpha;
@@ -99,8 +107,6 @@ function handleOrientation(event) {
         document.getElementById('status').textContent = 'Status: No sensor data.';
         document.getElementById('azimuth').textContent = 'Azimuth: --°';
         document.getElementById('altitude').textContent = 'Altitude: --°';
-        document.getElementById('az-countdown').textContent = '(remaining: --°)';
-        document.getElementById('alt-countdown').textContent = '(remaining: --°)';
         return;
     }
 
@@ -112,13 +118,9 @@ function handleOrientation(event) {
     if (azimuth > 180) azimuth -= 360;
     if (azimuth < -180) azimuth += 360;
 
-    // Update display with countdowns (always update)
-    const azCountdown = Math.abs(azimuth);
-    const altCountdown = Math.abs(altitude - targetAltitude);
-    document.getElementById('azimuth').textContent = `Azimuth: ${azimuth.toFixed(1)}° `;
-    document.getElementById('altitude').textContent = `Altitude: ${altitude.toFixed(1)}° `;
-    document.getElementById('az-countdown').textContent = `(remaining: ${azCountdown.toFixed(1)}°)`;
-    document.getElementById('alt-countdown').textContent = `(remaining: ${altCountdown.toFixed(1)}°)`;
+    // Update display
+    document.getElementById('azimuth').textContent = `Azimuth: ${azimuth.toFixed(1)}°`;
+    document.getElementById('altitude').textContent = `Altitude: ${altitude.toFixed(1)}°`;
 
     // Alignment logic (only if calibrated)
     if (isCalibrated) {
@@ -147,7 +149,6 @@ function handleOrientation(event) {
         // Ensure target crosshair is visible and moving
         targetCrosshair.style.display = 'block';
         targetCrosshair.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
-        console.log(`Target crosshair: x=${xOffset}, y=${yOffset}`); // Debug log
 
         // Zoom logic: Scale reticle when within 3° on both axes
         if (Math.abs(azimuth) <= zoomThreshold && Math.abs(altitude - targetAltitude) <= zoomThreshold) {
@@ -175,9 +176,6 @@ function handleOrientation(event) {
             }
         }
         document.getElementById('status').textContent = `Status: ${status}`;
-    } else {
-        // Ensure target crosshair is hidden pre-calibration
-        document.getElementById('target-crosshair').style.display = 'none';
     }
 }
 
