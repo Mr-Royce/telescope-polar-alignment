@@ -1,4 +1,4 @@
-let targetAltitude = 90; // Default until location is fetched
+let targetAltitude = 37; // Default to 37° if location unavailable
 let azimuthOffset = 0;   // Calibration offset for azimuth
 let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
@@ -18,16 +18,35 @@ function getLocation() {
                 }
                 document.getElementById('instructions').textContent =
                     `Place your phone flat on the telescope. (Latitude: ${latitude.toFixed(2)}°)`;
+                document.getElementById('status').textContent =
+                    `Status: Location set to ${latitude.toFixed(2)}°. Calibrate to proceed.`;
             },
             error => {
                 console.error('Geolocation error:', error);
-                document.getElementById('status').textContent =
-                    'Status: Location unavailable. Using default 90° altitude.';
+                let errorMessage = 'Status: Location unavailable. ';
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage += 'Permission denied. Using default 37°.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage += 'Position unavailable. Using default 37°.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage += 'Request timed out. Using default 37°.';
+                        break;
+                    default:
+                        errorMessage += 'Unknown error. Using default 37°.';
+                }
+                document.getElementById('status').textContent = errorMessage;
+                document.getElementById('instructions').textContent =
+                    'Place your phone flat on the telescope. (Default: 37°)';
             }
         );
     } else {
         document.getElementById('status').textContent =
-            'Status: Geolocation not supported by your browser.';
+            'Status: Geolocation not supported. Using default 37°.';
+        document.getElementById('instructions').textContent =
+            'Place your phone flat on the telescope. (Default: 37°)';
     }
 }
 
