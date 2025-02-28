@@ -63,7 +63,7 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (waits for first valid data if needed)
+// Calibration function (handles location and calibration)
 function calibrate() {
     if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
         azimuthOffset = latestOrientation.alpha;
@@ -72,7 +72,7 @@ function calibrate() {
         showCalibrationConfirm();
         document.getElementById('status').textContent =
             'Status: Calibrated! Now align your telescope.';
-        getLocation(); // Fetch location in background
+        getLocation(); // Fetch location with calibration
     } else {
         document.getElementById('status').textContent =
             'Status: Waiting for sensor data... Move the phone to calibrate.';
@@ -84,7 +84,7 @@ function calibrate() {
                 showCalibrationConfirm();
                 document.getElementById('status').textContent =
                     'Status: Calibrated! Now align your telescope.';
-                getLocation(); // Fetch location in background
+                getLocation(); // Fetch location with calibration
                 window.removeEventListener('deviceorientation', waitForData);
             }
         };
@@ -120,7 +120,7 @@ function handleOrientation(event) {
 
     // Determine precision based on zoom state
     const zoomThreshold = 3;
-    const precision = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 3 : 1;
+    const precision = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 2 : 1;
 
     // Update display (altitude as countdown)
     document.getElementById('azimuth').textContent = `Azimuth: ${azimuth.toFixed(precision)}°`;
@@ -131,7 +131,7 @@ function handleOrientation(event) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
         const reticleSize = 150; // Reticle width/height in pixels
-        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 4 : 1; // Split difference
+        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 1.75 : 1;
         const maxOffset = (reticleSize / 2 - 10) / scaleFactor; // Adjust bounds for zoom
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
@@ -157,7 +157,7 @@ function handleOrientation(event) {
 
         // Zoom logic: Scale reticle when within 3° on both axes
         if (Math.abs(azimuth) <= zoomThreshold && Math.abs(altitude - targetAltitude) <= zoomThreshold) {
-            reticle.style.transform = 'scale(3.5)'; // Split difference
+            reticle.style.transform = 'scale(3.5)';
             reticle.classList.add('zoomed'); // Apply thinner lines
         } else {
             reticle.style.transform = 'scale(1)';
@@ -194,9 +194,6 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 if (response === 'granted') {
                     window.addEventListener('deviceorientation', handleOrientation);
                     document.getElementById('calibrate-btn').addEventListener('click', calibrate);
-                    document.getElementById('location-btn').addEventListener('click', () => {
-                        getLocation();
-                    });
                 } else {
                     alert('Sensor permission denied.');
                 }
@@ -206,7 +203,4 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
 } else {
     window.addEventListener('deviceorientation', handleOrientation);
     document.getElementById('calibrate-btn').addEventListener('click', calibrate);
-    document.getElementById('location-btn').addEventListener('click', () => {
-        getLocation();
-    });
 }
