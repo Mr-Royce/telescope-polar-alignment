@@ -60,11 +60,12 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (sets offsets and starts alignment)
+// Calibration function (sets offsets using compass, then uses accelerometer)
 function calibrate() {
     if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-        // Use alpha as compass heading relative to North at calibration
-        azimuthOffset = latestOrientation.alpha; // Assumes phone faces North when calibrated
+        // Use compass heading if available (iOS), otherwise alpha as compass proxy
+        const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? latestOrientation.webkitCompassHeading : latestOrientation.alpha;
+        azimuthOffset = compassHeading; // Compass North reference
         altitudeOffset = latestOrientation.beta;
         isCalibrated = true;
         showCalibrationConfirm();
@@ -82,12 +83,9 @@ function calibrate() {
 function handleOrientation(event) {
     latestOrientation = event; // Store latest event data
 
-    const alpha = event.alpha; // Compass direction (0° = North)
+    const alpha = event.alpha; // Gyro-based orientation (0° = North when calibrated)
     const beta = event.beta;   // Front-back tilt (-90° to 90°)
     const gamma = event.gamma; // Left-right tilt (-90° to 90°)
-
-    // Check for webkitCompassHeading (iOS)
-    const compassHeading = event.webkitCompassHeading !== undefined ? event.webkitCompassHeading : null;
 
     if (alpha === null || beta === null) {
         document.getElementById('azimuth').textContent = 'Azimuth: --°';
@@ -95,8 +93,8 @@ function handleOrientation(event) {
         return;
     }
 
-    // Use compass heading if available (iOS), otherwise adjust alpha
-    let azimuth = isCalibrated ? (compassHeading !== null ? compassHeading : alpha - azimuthOffset) : alpha;
+    // Use alpha adjusted by compass offset for real-time azimuth
+    let azimuth = isCalibrated ? alpha - azimuthOffset : alpha;
 
     // Normalize azimuth to -180° to 180°
     if (azimuth > 180) azimuth -= 360;
@@ -161,10 +159,10 @@ function handleOrientation(event) {
         } else {
             status = 'Adjust telescope: ';
             if (azimuth > azimuthTolerance) {
-                status += 'Turn left ';
+                status += 'Turn right ';
             }
             if (azimuth < -azimuthTolerance) {
-                status += 'Turn right ';
+                status += 'Turn left ';
             }
             if (altitude < targetAltitude - altitudeTolerance) {
                 status += 'Tilt up ';
