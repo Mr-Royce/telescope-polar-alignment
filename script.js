@@ -83,50 +83,40 @@ function handleOrientation(event) {
     if (isCalibrated) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
-        const maxDistance = 50; // Max arrow distance in pixels
+        const maxOffset = 75; // Max pixels from center (half of reticle size)
         let status = '';
-        const arrows = {
-            up: document.getElementById('arrow-up'),
-            down: document.getElementById('arrow-down'),
-            left: document.getElementById('arrow-left'),
-            right: document.getElementById('arrow-right')
-        };
+        const targetCrosshair = document.getElementById('target-crosshair');
 
-        // Reset arrow visibility
-        arrows.up.style.display = 'none';
-        arrows.down.style.display = 'none';
-        arrows.left.style.display = 'none';
-        arrows.right.style.display = 'none';
+        // Calculate position offsets based on error
+        let azimuthError = azimuth; // Degrees deviation
+        let altitudeError = altitude - targetAltitude;
+
+        // Move target crosshair
+        let xOffset = azimuthError * 2; // 2px per degree
+        let yOffset = altitudeError * 2;
+
+        // Cap offsets to stay within reticle
+        xOffset = Math.max(-maxOffset, Math.min(maxOffset, xOffset));
+        yOffset = Math.max(-maxOffset, Math.min(maxOffset, yOffset));
+
+        targetCrosshair.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
 
         // Check alignment
         if (Math.abs(azimuth) < azimuthTolerance && Math.abs(altitude - targetAltitude) < altitudeTolerance) {
             status = `Aligned! Pointing near ${(targetAltitude > 0) ? 'Polaris' : 'Southern pole'}.`;
         } else {
             status = 'Adjust telescope: ';
-            // Reversed again: Positive azimuth = turn right, Negative = turn left
             if (azimuth > azimuthTolerance) {
                 status += 'Turn right ';
-                arrows.right.style.display = 'block';
-                const rightDistance = Math.min(Math.abs(azimuth) * 2, maxDistance);
-                arrows.right.style.right = `${rightDistance}px`; // Move outward
             }
             if (azimuth < -azimuthTolerance) {
                 status += 'Turn left ';
-                arrows.left.style.display = 'block';
-                const leftDistance = Math.min(Math.abs(azimuth) * 2, maxDistance);
-                arrows.left.style.left = `${leftDistance}px`; // Move outward
             }
             if (altitude < targetAltitude - altitudeTolerance) {
                 status += 'Tilt up ';
-                arrows.up.style.display = 'block';
-                const upDistance = Math.min(Math.abs(altitude - targetAltitude) * 2, maxDistance);
-                arrows.up.style.top = `${-upDistance}px`; // Move upward
             }
             if (altitude > targetAltitude + altitudeTolerance) {
                 status += 'Tilt down ';
-                arrows.down.style.display = 'block';
-                const downDistance = Math.min(Math.abs(altitude - targetAltitude) * 2, maxDistance);
-                arrows.down.style.bottom = `${downDistance}px`; // Move downward
             }
         }
         document.getElementById('status').textContent = `Status: ${status}`;
