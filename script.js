@@ -62,28 +62,17 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (fetches location and calibrates in one step)
+// Calibration function (one tap)
 function calibrate(event) {
     if (event && event.alpha !== null && event.beta !== null) {
-        // Fetch location if not already set
-        if (!isCalibrated) {
-            getLocation((success) => {
-                azimuthOffset = event.alpha;
-                altitudeOffset = event.beta;
-                isCalibrated = true;
-                showCalibrationConfirm();
-                document.getElementById('status').textContent =
-                    success ? 'Status: Calibrated! Now align your telescope.' :
-                              'Status: Calibrated with default 37°! Now align your telescope.';
-            });
-        } else {
-            // Recalibrate with existing location
-            azimuthOffset = event.alpha;
-            altitudeOffset = event.beta;
-            showCalibrationConfirm();
-            document.getElementById('status').textContent =
-                'Status: Calibrated! Now align your telescope.';
-        }
+        azimuthOffset = event.alpha;
+        altitudeOffset = event.beta;
+        isCalibrated = true;
+        showCalibrationConfirm();
+        document.getElementById('status').textContent =
+            'Status: Calibrated! Now align your telescope.';
+        // Fetch location in background, doesn’t block calibration
+        getLocation();
     } else {
         document.getElementById('status').textContent =
             'Status: Calibration failed. No sensor data available.';
@@ -99,7 +88,7 @@ function handleOrientation(event) {
     if (alpha === null || beta === null) {
         document.getElementById('status').textContent = 'Status: No sensor data.';
         document.getElementById('azimuth').textContent = 'Azimuth: --°';
-        document.getElementById('altitude').textContent = 'Altitude: --°';
+        document.getElementById('altitude').textContent = 'Altitude remaining: --°';
         return;
     }
 
@@ -178,7 +167,7 @@ function handleOrientation(event) {
     }
 }
 
-// Setup event listeners (no auto-fetch on load)
+// Setup event listeners
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.body.addEventListener('click', function() {
         DeviceOrientationEvent.requestPermission()
