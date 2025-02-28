@@ -2,7 +2,6 @@ let targetAltitude = 37; // Default to 37° if location unavailable
 let azimuthOffset = 0;   // Calibration offset for azimuth
 let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
-let latestOrientation = null; // Store latest sensor data
 
 // Request geolocation and update target altitude
 function getLocation() {
@@ -60,48 +59,67 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (one-click with immediate action)
+// Calibration function (one-click with immediate calibration)
 function calibrate() {
-    if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-        // Immediate calibration with latest data
-        azimuthOffset = latestOrientation.alpha;
-        altitudeOffset = latestOrientation.beta;
-        isCalibrated = true;
-        getLocation(); // Fetch location immediately
-        showCalibrationConfirm();
-        document.getElementById('status').textContent =
-            'Status: Calibrated! Now align your telescope.';
-    } else {
-        document.getElementById('status').textContent =
-            'Status: Enabling sensors... Move the phone to calibrate.';
-        const waitForData = (event) => {
-            if (event.alpha !== null && event.beta !== null) {
-                azimuthOffset = event.alpha;
-                altitudeOffset = event.beta;
-                isCalibrated = true;
-                getLocation(); // Fetch location immediately
-                showCalibrationConfirm();
-                document.getElementById('status').textContent =
-                    'Status: Calibrated! Now align your telescope.';
-                window.removeEventListener('deviceorientation', waitForData);
-                // Force an immediate update
-                handleOrientation(event);
-            }
-        };
-        window.addEventListener('deviceorientation', waitForData, { once: true });
+    if (isCalibrated) {
+        // Recalibrate if already calibrated
+        const event = latestOrientation;
+        if (event && event.alpha !== null && event.beta !== null) {
+            azimuthOffset = event.alpha;
+            altitudeOffset = event.beta;
+            showCalibrationConfirm();
+            document.getElementById('status').textContent =
+                'Status: Recalibrated! Now align your telescope.';
+            getLocation();
+            handleOrientation(event); // Update immediately
+        }
+        return;
+    }
+
+    // First calibration
+    document.getElementById('status').textContent =
+        'Status: Enabling sensors... Move the phone to calibrate.';
+    
+    let firstEventHandled = false;
+    const calibrateWithFirstEvent = (event) => {
+        if (event.alpha !== null && event.beta !== null && !firstEventHandled) {
+            firstEventHandled = true; // Prevent multiple triggers
+            azimuthOffset = event.alpha;
+            altitudeOffset = event.beta;
+            isCalibrated = true;
+            showCalibrationConfirm();
+            document.getElementById('status').textContent =
+                'Status: Calibrated! Now align your telescope.';
+            getLocation(); // Fetch location immediately
+            handleOrientation(event); // Start alignment
+            window.removeEventListener('deviceorientation', calibrateWithFirstEvent);
+        }
+    };
+
+    window.addEventListener('deviceorientation', calibrateWithFirstEvent);
+    // Trigger sensor permission if needed (iOS)
+    if (typeof DeviceOrientationEvent.requestPermission === 'function' && !window.DeviceOrientationEvent) {
+        DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response !== 'granted') {
+                    alert('Sensor permission denied.');
+                    document.getElementById('status').textContent =
+                        'Status: Sensor permission denied.';
+                }
+            })
+            .catch(console.error);
     }
 }
 
 // Handle device orientation
 function handleOrientation(event) {
-    latestOrientation = event; // Store latest event data
+    latestOrientation = event; // Store latest event data for recalibration
 
     const alpha = event.alpha; // Compass direction (0° = North)
     const beta = event.beta;   // Front-back tilt (-90° to 90°)
     const gamma = event.gamma; // Left-right tilt (-90° to 90°)
 
     if (alpha === null || beta === null) {
-        document.getElementById('status').textContent = 'Status: No sensor data.';
         document.getElementById('azimuth').textContent = 'Azimuth: --°';
         document.getElementById('altitude').textContent = 'Altitude remaining: --°';
         return;
@@ -187,20 +205,26 @@ function handleOrientation(event) {
     }
 }
 
-// Setup event listeners
+// Setup event listeners with initial permission check
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    document.body.addEventListener('click', function() {
-        DeviceOrientationEvent.requestPermission()
-            .then(response => {
-                if (response === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                    document.getElementById('calibrate-btn').addEventListener('click', calibrate);
-                } else {
-                    alert('Sensor permission denied.');
-                }
-            })
-            .catch(console.error);
-    }, { once: true });
+    document.getElementById('calibrate-btn').addEventListener('click', () => {
+        if (!window.DeviceOrientationEvent) {
+            DeviceOrientationEvent.requestPermission()
+                .then(response => {
+                    if (response === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        calibrate();
+                    } else {
+                        alert('Sensor permission denied.');
+                        document.getElementById('status').textContent =
+                            'Status: Sensor permission denied.';
+                    }
+                })
+                .catch(console.error);
+        } else {
+            calibrate();
+        }
+    });
 } else {
     window.addEventListener('deviceorientation', handleOrientation);
     document.getElementById('calibrate-btn').addEventListener('click', calibrate);
