@@ -2,6 +2,7 @@ let targetAltitude = 37; // Default to 37° if location unavailable
 let azimuthOffset = 0;   // Calibration offset for azimuth
 let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
+let latestOrientation = null; // Store latest sensor data
 
 // Request geolocation and update target altitude
 function getLocation(callback) {
@@ -62,11 +63,11 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (one tap)
-function calibrate(event) {
-    if (event && event.alpha !== null && event.beta !== null) {
-        azimuthOffset = event.alpha;
-        altitudeOffset = event.beta;
+// Calibration function (one tap using latest data)
+function calibrate() {
+    if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
+        azimuthOffset = latestOrientation.alpha;
+        altitudeOffset = latestOrientation.beta;
         isCalibrated = true;
         showCalibrationConfirm();
         document.getElementById('status').textContent =
@@ -75,12 +76,14 @@ function calibrate(event) {
         getLocation();
     } else {
         document.getElementById('status').textContent =
-            'Status: Calibration failed. No sensor data available yet. Try again.';
+            'Status: No sensor data available yet. Move the phone and try again.';
     }
 }
 
 // Handle device orientation
 function handleOrientation(event) {
+    latestOrientation = event; // Store latest event data
+
     const alpha = event.alpha; // Compass direction (0° = North)
     const beta = event.beta;   // Front-back tilt (-90° to 90°)
     const gamma = event.gamma; // Left-right tilt (-90° to 90°)
@@ -92,9 +95,9 @@ function handleOrientation(event) {
         return;
     }
 
-    // Apply calibration offsets
-    let azimuth = alpha - azimuthOffset;
-    let altitude = beta - altitudeOffset;
+    // Apply calibration offsets (only if calibrated)
+    let azimuth = isCalibrated ? alpha - azimuthOffset : alpha;
+    let altitude = isCalibrated ? beta - altitudeOffset : beta;
 
     // Normalize azimuth to -180° to 180°
     if (azimuth > 180) azimuth -= 360;
@@ -168,14 +171,13 @@ function handleOrientation(event) {
     }
 }
 
-// Setup event listeners with persistent calibrate handler
+// Setup event listeners
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.body.addEventListener('click', function() {
         DeviceOrientationEvent.requestPermission()
             .then(response => {
                 if (response === 'granted') {
                     window.addEventListener('deviceorientation', handleOrientation);
-                    // Persistent calibrate listener, no { once: true }
                     document.getElementById('calibrate-btn').addEventListener('click', calibrate);
                     document.getElementById('location-btn').addEventListener('click', () => {
                         getLocation();
@@ -188,7 +190,6 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     }, { once: true });
 } else {
     window.addEventListener('deviceorientation', handleOrientation);
-    // Persistent calibrate listener, no { once: true }
     document.getElementById('calibrate-btn').addEventListener('click', calibrate);
     document.getElementById('location-btn').addEventListener('click', () => {
         getLocation();
