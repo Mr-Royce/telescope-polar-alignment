@@ -131,8 +131,8 @@ function handleOrientation(event) {
         const azimuthTolerance = 5;
         const altitudeTolerance = 5;
         const reticleSize = 150; // Reticle width/height in pixels
-        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 3 : 1; // Example high zoom (adjust as needed)
-        const maxOffset = reticleSize / 2 - 10; // Fixed at 65px, not scaled
+        const scaleFactor = (Math.abs(azimuth) <= zoomThreshold && altitudeRemaining <= zoomThreshold) ? 3 : 1; // Your high zoom (e.g., 3x)
+        const maxOffset = (reticleSize / 2 - 10) / scaleFactor; // Adjusted pre-scale offset
         const azScale = 2;  // Pixels per degree for azimuth
         const altScale = 3; // Pixels per degree for altitude
         let status = '';
@@ -147,7 +147,7 @@ function handleOrientation(event) {
         let xOffset = azimuthError * azScale;
         let yOffset = altitudeError * altScale;
 
-        // Cap offsets to stay within unscaled reticle bounds (150x150px)
+        // Cap offsets to stay within unscaled reticle bounds, adjusted for zoom
         xOffset = Math.max(-maxOffset, Math.min(maxOffset, xOffset));
         yOffset = Math.max(-maxOffset, Math.min(maxOffset, yOffset));
 
@@ -157,7 +157,7 @@ function handleOrientation(event) {
 
         // Zoom logic: Scale reticle when within 3° on both axes
         if (Math.abs(azimuth) <= zoomThreshold && Math.abs(altitude - targetAltitude) <= zoomThreshold) {
-            reticle.style.transform = 'scale(3)'; // Your super high zoom (adjust as needed)
+            reticle.style.transform = 'scale(3)'; // Your high zoom (e.g., 3x)
             reticle.classList.add('zoomed'); // Apply thinner lines
         } else {
             reticle.style.transform = 'scale(1)';
