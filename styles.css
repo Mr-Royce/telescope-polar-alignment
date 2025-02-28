@@ -17,26 +17,6 @@ h1 {
     z-index: 10; /* Above reticle */
 }
 
-#location-btn, #calibrate-btn {
-    padding: 10px 20px;
-    font-size: 16px;
-    margin: 5px;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    position: relative;
-    z-index: 10; /* Above reticle */
-}
-
-#location-btn {
-    background-color: #2196F3;
-}
-
-#location-btn:hover {
-    background-color: #1976D2;
-}
-
 #calibrate-btn {
     background-color: #4CAF50;
 }
