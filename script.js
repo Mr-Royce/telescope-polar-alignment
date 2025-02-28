@@ -104,8 +104,8 @@ function handleOrientation(event) {
 
     // Alignment logic (only if calibrated)
     if (isCalibrated) {
-        const azimuthTolerance = 5;
-        const altitudeTolerance = 5;
+        const azimuthTolerance = 1;
+        const altitudeTolerance = 1;
         const zoomThreshold = 3;
         const maxOffset = 75;
         const azScale = 2;  // Pixels per degree for azimuth
