@@ -67,40 +67,13 @@ function getMagneticDeclination(longitude) {
     return 0; // Default if longitude unavailable
 }
 
-// Calculate Local Sidereal Time (LST) for given date and longitude
-function calculateLST(date, longitude) {
-    // Convert to Julian Date
-    const year = date.getUTCFullYear();
-    const month = date.getUTCMonth() + 1;
-    const day = date.getUTCDate();
-    const hours = date.getUTCHours();
-    const minutes = date.getUTCMinutes();
-    const seconds = date.getUTCSeconds();
-
-    // Julian Date calculation
-    let JD = 2451544.5; // J2000
-    JD += (Date.UTC(year, month - 1, day, hours, minutes, seconds) - Date.UTC(2000, 0, 1, 12, 0, 0)) / (1000 * 60 * 60 * 24);
-    
-    // GMST calculation
-    const T = (JD - 2451545.0) / 36525;
-    let GMST = 6.697374558 + 2400.051336 * T + 0.000025862 * T * T;
-    GMST = GMST % 24;
-    GMST += (hours + minutes / 60 + seconds / 3600) * 1.00273790935;
-
-    // Adjust for longitude (degrees to hours)
-    GMST = (GMST + (longitude / 15)) % 24;
-    if (GMST < 0) GMST += 24;
-
-    return GMST;
-}
-
 // Draw polar reticle based on location and time
 function drawPolarReticle() {
     const canvas = document.getElementById('polar-reticle');
     const ctx = canvas.getContext('2d');
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) - 20; // Leave padding
+    const radius = Math.min(centerX, centerY) - 10; // Leave padding (smaller canvas)
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -110,7 +83,7 @@ function drawPolarReticle() {
     // Draw concentric circles (36°, 40°, 44° from NCP)
     const degreeToRadius = (deg) => (deg / 44) * radius; // Scale degrees to canvas radius (44° = max)
     ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 0.5; // Thinner for smaller canvas
     [36, 40, 44].forEach(deg => {
         const r = degreeToRadius(deg);
         ctx.beginPath();
@@ -118,31 +91,26 @@ function drawPolarReticle() {
         ctx.stroke();
 
         // Label degrees
-        ctx.font = '12px Arial';
+        ctx.font = '8px Arial'; // Smaller font
         ctx.fillStyle = '#ff0000';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${deg}°`, centerX + r + 20, centerY);
+        ctx.fillText(`${deg}°`, centerX + r + 10, centerY);
     });
 
     // Draw hour markings (0-12)
-    ctx.font = '14px Arial';
+    ctx.font = '10px Arial'; // Smaller font
     ctx.fillStyle = '#ff0000';
     for (let hour = 0; hour < 12; hour++) {
         const angle = (hour * 30 - 90) * Math.PI / 180; // 30° per hour, 0 at top
-        const x = centerX + (radius + 10) * Math.cos(angle);
-        const y = centerY + (radius + 10) * Math.sin(angle);
+        const x = centerX + (radius + 5) * Math.cos(angle);
+        const y = centerY + (radius + 5) * Math.sin(angle);
         ctx.fillText(hour.toString(), x, y);
-    }
-
-    // Calculate LST for Polaris position
-    const date = new Date('2025-03-01T17:02:45Z'); // From your image (UTC)
-    const lst = calculateLST(date, targetLongitude);
-    const positionAngle = lst * 15; // LST in degrees (1 hour = 15°)
+    });
 
     // Draw crosshair at NCP (center)
     ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 0.5;
     ctx.beginPath();
     ctx.moveTo(centerX - radius, centerY);
     ctx.lineTo(centerX + radius, centerY);
@@ -150,13 +118,15 @@ function drawPolarReticle() {
     ctx.lineTo(centerX, centerY + radius);
     ctx.stroke();
 
-    // Draw Polaris (*) at offset (0.74° from NCP)
+    // Polaris position (using app's LST: 19.638 hours)
+    const lst = 19.638; // From app
+    const positionAngle = lst * 15; // LST in degrees (1 hour = 15°)
     const polarisOffsetDeg = 0.74; // Polaris distance from NCP (2025)
     const polarisRadius = degreeToRadius(polarisOffsetDeg);
     const polarisAngle = (positionAngle - 90) * Math.PI / 180; // Align with LST
     const polarisX = centerX + polarisRadius * Math.cos(polarisAngle);
     const polarisY = centerY + polarisRadius * Math.sin(polarisAngle);
-    ctx.font = '20px Arial';
+    ctx.font = '14px Arial'; // Slightly smaller
     ctx.fillStyle = '#ffcc00'; // Yellow for Polaris
     ctx.fillText('*', polarisX, polarisY);
 }
@@ -215,7 +185,7 @@ function calibrate() {
                     'Status: Calibrated! Point phone North, then align your telescope.';
                 getLocation();
                 const declination = getMagneticDeclination(targetLongitude);
-                azimuthOffset += declination; // Adjust for true North
+                azimuthOffset += declination;
                 handleOrientation(latestOrientation || { alpha: azimuthOffset, beta: altitudeOffset });
             } else {
                 document.getElementById('status').textContent =
@@ -319,7 +289,7 @@ function handleOrientation(event) {
     }
 }
 
-// Setup event listeners (no initial permission request)
+// Setup event listeners
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.getElementById('calibrate-btn').addEventListener('click', calibrate);
 } else {
