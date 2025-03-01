@@ -107,6 +107,13 @@ h1 {
     z-index: 10;
 }
 
+#polar-reticle {
+    margin: 20px auto;
+    display: block;
+    z-index: 5;
+    border: 1px solid #ff0000; /* Debug visibility */
+}
+
 .confirm-overlay {
     position: fixed;
     top: 50%;
