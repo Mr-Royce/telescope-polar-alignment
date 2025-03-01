@@ -111,6 +111,7 @@ h1 {
     margin: 20px auto;
     display: block;
     z-index: 5;
+    border: 1px solid #ff0000; /* Debug visibility */
 }
 
 .confirm-overlay {
