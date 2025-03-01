@@ -9,6 +9,7 @@ let latestOrientation = null; // Store latest sensor data
 
 // Request geolocation and update target altitude and longitude
 function getLocation() {
+    console.log('Fetching location...');
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             position => {
@@ -68,12 +69,12 @@ function getMagneticDeclination(longitude) {
     return 0; // Default if longitude unavailable
 }
 
-// Draw polar reticle based on location and time
+// Draw polar reticle based on location and time (simplified)
 function drawPolarReticle() {
     console.log('Drawing polar reticle...');
     const canvas = document.getElementById('polar-reticle');
-    if (!canvas || !canvas.getContext) {
-        console.error('Canvas not found or unsupported.');
+    if (!canvas) {
+        console.error('Canvas element not found.');
         return;
     }
     const ctx = canvas.getContext('2d');
@@ -153,14 +154,18 @@ function showCalibrationConfirm() {
 
 // Calibration function (averages compass readings)
 function calibrate() {
+    console.log('Calibrate button clicked. Sensors enabled:', sensorsEnabled);
     if (!sensorsEnabled && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        console.log('Requesting sensor permission...');
         DeviceOrientationEvent.requestPermission()
             .then(response => {
+                console.log('Permission response:', response);
                 if (response === 'granted') {
                     sensorsEnabled = true;
                     window.addEventListener('deviceorientation', handleOrientation);
                     document.getElementById('status').textContent =
                         'Status: Sensors enabled. Point phone North and hold steady to calibrate.';
+                    startCalibration();
                 } else {
                     alert('Sensor permission denied.');
                     document.getElementById('status').textContent =
@@ -176,12 +181,19 @@ function calibrate() {
     }
 
     // Start compass sampling
+    startCalibration();
+}
+
+// Start the calibration process
+function startCalibration() {
+    console.log('Starting calibration...');
     if (!isCalibrated) {
         compassSamples = [];
         document.getElementById('status').textContent =
             'Status: Calibrating compass... Hold phone steady facing North for 1 second.';
         
         const collectSamples = (event) => {
+            console.log('Collecting sample:', event);
             if (event.alpha !== null && event.beta !== null) {
                 const compassHeading = event.webkitCompassHeading !== undefined ? event.webkitCompassHeading : event.alpha;
                 compassSamples.push(compassHeading);
@@ -193,6 +205,7 @@ function calibrate() {
 
         // Stop sampling after 1 second and average
         setTimeout(() => {
+            console.log('Samples collected:', compassSamples);
             window.removeEventListener('deviceorientation', collectSamples);
             if (compassSamples.length >= 2) {
                 const alphaSamples = compassSamples.filter((_, i) => i % 2 === 0);
@@ -229,6 +242,7 @@ function calibrate() {
 
 // Handle device orientation
 function handleOrientation(event) {
+    console.log('DeviceOrientation event:', event);
     latestOrientation = event;
 
     const alpha = event.alpha;
@@ -311,8 +325,29 @@ function handleOrientation(event) {
 
 // Setup event listeners
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    document.getElementById('calibrate-btn').addEventListener('click', calibrate);
+    DeviceOrientationEvent.requestPermission()
+        .then(response => {
+            if (response === 'granted') {
+                sensorsEnabled = true;
+                window.addEventListener('deviceorientation', handleOrientation);
+                document.getElementById('calibrate-btn').addEventListener('click', calibrate);
+            } else {
+                alert('Sensor permission denied.');
+                document.getElementById('status').textContent =
+                    'Status: Sensor permission denied. Please enable sensors to proceed.';
+            }
+        })
+        .catch(error => {
+            console.error('Permission request error:', error);
+            document.getElementById('status').textContent =
+                'Status: Error enabling sensors. Please try again.';
+        });
 } else {
     window.addEventListener('deviceorientation', handleOrientation);
     document.getElementById('calibrate-btn').addEventListener('click', calibrate);
 }
+
+// Draw reticle on load with default values
+document.addEventListener('DOMContentLoaded', () => {
+    drawPolarReticle();
+});
