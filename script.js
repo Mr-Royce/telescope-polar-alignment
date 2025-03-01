@@ -7,6 +7,15 @@ let sensorsEnabled = false; // Track sensor permission state
 let compassSamples = [];    // Store compass readings for averaging
 let latestOrientation = null; // Store latest sensor data
 
+// Simulate click on calibrate button to request permission automatically
+document.addEventListener('DOMContentLoaded', () => {
+    const calibrateBtn = document.getElementById('calibrate-btn');
+    if (calibrateBtn) {
+        calibrateBtn.click(); // Simulate click to trigger permission prompt
+    }
+    drawPolarReticle(); // Ensure graphic is drawn on load
+});
+
 // Request geolocation and update target altitude and longitude
 function getLocation() {
     if (navigator.geolocation) {
@@ -78,7 +87,7 @@ function drawPolarReticle() {
     const ctx = canvas.getContext('2d');
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) - 10; // Leave padding (smaller canvas)
+    const radius = Math.min(centerX, centerY) - 10;
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -86,7 +95,7 @@ function drawPolarReticle() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw concentric circles (36°, 40°, 44° from NCP)
-    const degreeToRadius = (deg) => (deg / 44) * radius; // Scale degrees to canvas radius (44° = max)
+    const degreeToRadius = (deg) => (deg / 44) * radius;
     ctx.strokeStyle = '#ff0000';
     ctx.lineWidth = 0.5;
     [36, 40, 44].forEach(deg => {
@@ -107,22 +116,22 @@ function drawPolarReticle() {
     ctx.font = '10px Arial';
     ctx.fillStyle = '#ff0000';
     for (let hour = 0; hour < 12; hour++) {
-        const angle = (hour * 30 - 90) * Math.PI / 180; // 30° per hour, 0 at top
+        const angle = (hour * 30 - 90) * Math.PI / 180;
         const x = centerX + (radius + 5) * Math.cos(angle);
         const y = centerY + (radius + 5) * Math.sin(angle);
         ctx.fillText(hour.toString(), x, y);
     });
 
     // Polaris position (using app's LST: 19.638 hours)
-    const lst = 19.638; // From app
-    const positionAngle = lst * 15; // LST in degrees (1 hour = 15°)
-    const polarisOffsetDeg = 0.74; // Polaris distance from NCP (2025)
+    const lst = 19.638;
+    const positionAngle = lst * 15;
+    const polarisOffsetDeg = 0.74;
     const polarisRadius = degreeToRadius(polarisOffsetDeg);
-    const polarisAngle = (positionAngle - 90) * Math.PI / 180; // Align with LST
+    const polarisAngle = (positionAngle - 90) * Math.PI / 180;
     const polarisX = centerX + polarisRadius * Math.cos(polarisAngle);
     const polarisY = centerY + polarisRadius * Math.sin(polarisAngle);
     ctx.font = '14px Arial';
-    ctx.fillStyle = '#ffcc00'; // Yellow for Polaris
+    ctx.fillStyle = '#ffcc00';
     ctx.fillText('*', polarisX, polarisY);
 
     // Draw crosshair at NCP (center)
@@ -139,10 +148,14 @@ function drawPolarReticle() {
 // Show calibration confirmation
 function showCalibrationConfirm() {
     const confirmOverlay = document.getElementById('calibration-confirm');
-    confirmOverlay.style.display = 'block';
-    setTimeout(() => {
-        confirmOverlay.style.display = 'none';
-    }, 2000);
+    if (confirmOverlay) {
+        confirmOverlay.style.display = 'block';
+        setTimeout(() => {
+            confirmOverlay.style.display = 'none';
+        }, 2000);
+    } else {
+        console.error('Calibration confirm overlay not found.');
+    }
 }
 
 // Calibration function (averages compass readings)
@@ -152,7 +165,7 @@ function calibrate() {
             .then(response => {
                 if (response === 'granted') {
                     sensorsEnabled = true;
-                    window.addEventListener('deviceorientation', handleOrientation);
+                    window.addEventListener('deviceorientation', handleOrientation, { once: true });
                     document.getElementById('status').textContent =
                         'Status: Sensors enabled. Point phone North and hold steady to calibrate.';
                 } else {
@@ -166,57 +179,57 @@ function calibrate() {
                 document.getElementById('status').textContent =
                     'Status: Error enabling sensors. Please try again.';
             });
-        return;
-    }
+    } else {
+        // Start compass sampling after sensors are enabled
+        if (!isCalibrated) {
+            compassSamples = [];
+            document.getElementById('status').textContent =
+                'Status: Calibrating compass... Hold phone steady facing North for 1 second.';
+            
+            const collectSamples = (event) => {
+                if (event.alpha !== null && event.beta !== null) {
+                    const compassHeading = event.webkitCompassHeading !== undefined ? event.webkitCompassHeading : event.alpha;
+                    compassSamples.push(compassHeading);
+                    compassSamples.push(event.beta);
+                }
+            };
 
-    // Start compass sampling
-    if (!isCalibrated) {
-        compassSamples = [];
-        document.getElementById('status').textContent =
-            'Status: Calibrating compass... Hold phone steady facing North for 1 second.';
-        
-        const collectSamples = (event) => {
-            if (event.alpha !== null && event.beta !== null) {
-                const compassHeading = event.webkitCompassHeading !== undefined ? event.webkitCompassHeading : event.alpha;
-                compassSamples.push(compassHeading);
-                compassSamples.push(event.beta);
-            }
-        };
+            window.addEventListener('deviceorientation', collectSamples);
 
-        window.addEventListener('deviceorientation', collectSamples);
-
-        // Stop sampling after 1 second and average
-        setTimeout(() => {
-            window.removeEventListener('deviceorientation', collectSamples);
-            if (compassSamples.length >= 2) {
-                const alphaSamples = compassSamples.filter((_, i) => i % 2 === 0);
-                const betaSamples = compassSamples.filter((_, i) => i % 2 === 1);
-                azimuthOffset = alphaSamples.reduce((sum, val) => sum + val, 0) / alphaSamples.length;
-                altitudeOffset = betaSamples.reduce((sum, val) => sum + val, 0) / betaSamples.length;
-                isCalibrated = true;
+            // Stop sampling after 1 second and average
+            setTimeout(() => {
+                window.removeEventListener('deviceorientation', collectSamples);
+                if (compassSamples.length >= 2) {
+                    const alphaSamples = compassSamples.filter((_, i) => i % 2 === 0);
+                    const betaSamples = compassSamples.filter((_, i) => i % 2 === 1);
+                    azimuthOffset = alphaSamples.reduce((sum, val) => sum + val, 0) / alphaSamples.length;
+                    altitudeOffset = betaSamples.reduce((sum, val) => sum + val, 0) / betaSamples.length;
+                    isCalibrated = true;
+                    showCalibrationConfirm();
+                    document.getElementById('status').textContent =
+                        'Status: Calibrated! Point phone North, then align your telescope.';
+                    getLocation();
+                    const declination = getMagneticDeclination(targetLongitude);
+                    azimuthOffset += declination;
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    handleOrientation(latestOrientation || { alpha: azimuthOffset, beta: altitudeOffset });
+                } else {
+                    document.getElementById('status').textContent =
+                        'Status: Not enough data. Hold steady and try again.';
+                }
+            }, 1000);
+        } else {
+            // Recalibrate with latest data
+            if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
+                const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? latestOrientation.webkitCompassHeading : latestOrientation.alpha;
+                azimuthOffset = compassHeading + getMagneticDeclination(targetLongitude);
+                altitudeOffset = latestOrientation.beta;
                 showCalibrationConfirm();
                 document.getElementById('status').textContent =
-                    'Status: Calibrated! Point phone North, then align your telescope.';
+                    'Status: Recalibrated! Point phone North, then align your telescope.';
                 getLocation();
-                const declination = getMagneticDeclination(targetLongitude);
-                azimuthOffset += declination;
-                handleOrientation(latestOrientation || { alpha: azimuthOffset, beta: altitudeOffset });
-            } else {
-                document.getElementById('status').textContent =
-                    'Status: Not enough data. Hold steady and try again.';
+                handleOrientation(latestOrientation);
             }
-        }, 1000);
-    } else {
-        // Recalibrate with latest data
-        if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-            const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? latestOrientation.webkitCompassHeading : latestOrientation.alpha;
-            azimuthOffset = compassHeading + getMagneticDeclination(targetLongitude);
-            altitudeOffset = latestOrientation.beta;
-            showCalibrationConfirm();
-            document.getElementById('status').textContent =
-                'Status: Recalibrated! Point phone North, then align your telescope.';
-            getLocation();
-            handleOrientation(latestOrientation);
         }
     }
 }
