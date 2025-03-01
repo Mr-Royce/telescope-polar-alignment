@@ -3,6 +3,7 @@ let azimuthOffset = 0;   // Calibration offset for azimuth (compass North)
 let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
 let latestOrientation = null; // Store latest sensor data
+let sensorsEnabled = false;   // Track sensor permission state
 
 // Request geolocation and update target altitude
 function getLocation() {
@@ -62,8 +63,31 @@ function showCalibrationConfirm() {
 
 // Calibration function (sets offsets using compass, then uses accelerometer)
 function calibrate() {
+    if (!sensorsEnabled && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // Request permission on first click (iOS)
+        DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response === 'granted') {
+                    sensorsEnabled = true;
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    document.getElementById('status').textContent =
+                        'Status: Sensors enabled. Move the phone to calibrate.';
+                } else {
+                    alert('Sensor permission denied.');
+                    document.getElementById('status').textContent =
+                        'Status: Sensor permission denied. Please enable sensors to proceed.';
+                }
+            })
+            .catch(error => {
+                console.error('Permission request error:', error);
+                document.getElementById('status').textContent =
+                    'Status: Error enabling sensors. Please try again.';
+            });
+        return; // Wait for permission before proceeding
+    }
+
+    // Calibration logic after sensors are enabled
     if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-        // Use compass heading if available (iOS), otherwise alpha as compass proxy
         const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? latestOrientation.webkitCompassHeading : latestOrientation.alpha;
         azimuthOffset = compassHeading; // Compass North reference
         altitudeOffset = latestOrientation.beta;
@@ -175,24 +199,9 @@ function handleOrientation(event) {
     }
 }
 
-// Setup event listeners with initial permission request
+// Setup event listeners (no initial permission request)
 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission()
-        .then(response => {
-            if (response === 'granted') {
-                window.addEventListener('deviceorientation', handleOrientation);
-                document.getElementById('calibrate-btn').addEventListener('click', calibrate);
-            } else {
-                alert('Sensor permission denied.');
-                document.getElementById('status').textContent =
-                    'Status: Sensor permission denied. Please enable sensors to proceed.';
-            }
-        })
-        .catch(error => {
-            console.error('Permission request error:', error);
-            document.getElementById('status').textContent =
-                'Status: Error enabling sensors. Please try again.';
-        });
+    document.getElementById('calibrate-btn').addEventListener('click', calibrate);
 } else {
     window.addEventListener('deviceorientation', handleOrientation);
     document.getElementById('calibrate-btn').addEventListener('click', calibrate);
