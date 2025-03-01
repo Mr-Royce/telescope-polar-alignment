@@ -68,47 +68,67 @@ function getMagneticDeclination(longitude) {
 // Show calibration confirmation
 function showCalibrationConfirm() {
     const confirmOverlay = document.getElementById('calibration-confirm');
-    confirmOverlay.style.display = 'block';
-    setTimeout(() => {
-        confirmOverlay.style.display = 'none';
-    }, 2000);
+    if (confirmOverlay) {
+        confirmOverlay.style.display = 'block';
+        setTimeout(() => {
+            confirmOverlay.style.display = 'none';
+        }, 2000);
+    } else {
+        console.error('Calibration confirm overlay not found.');
+    }
 }
 
 // Calibration function (averages compass readings)
 function calibrate() {
+    console.log('Calibrate button clicked. Sensors enabled:', sensorsEnabled);
+
+    // Request permission if needed
     if (!sensorsEnabled && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        console.log('Requesting sensor permission...');
         DeviceOrientationEvent.requestPermission()
             .then(response => {
+                console.log('Permission response:', response);
                 if (response === 'granted') {
                     sensorsEnabled = true;
+                    console.log('Sensors enabled. Adding deviceorientation listener...');
                     window.addEventListener('deviceorientation', handleOrientation);
                     document.getElementById('status').textContent =
                         'Status: Sensors enabled. Point phone North and hold steady to calibrate.';
+                    startCalibration();
                 } else {
-                    alert('Sensor permission denied.');
+                    alert('Sensor permission denied. Please enable motion access in your browser settings and try again.');
                     document.getElementById('status').textContent =
-                        'Status: Sensor permission denied. Please enable sensors to proceed.';
+                        'Status: Sensor permission denied. Please enable sensors and try again.';
                 }
             })
             .catch(error => {
                 console.error('Permission request error:', error);
+                alert('Error enabling sensors. Please ensure motion access is enabled in your browser settings and try again.');
                 document.getElementById('status').textContent =
                     'Status: Error enabling sensors. Please try again.';
             });
-        return;
+    } else {
+        // For non-iOS or if sensors are already enabled
+        console.log('No permission required or sensors already enabled. Starting calibration...');
+        startCalibration();
     }
+}
 
-    // Start compass sampling
+// Start the calibration process
+function startCalibration() {
+    console.log('Starting calibration...');
     if (!isCalibrated) {
         compassSamples = [];
         document.getElementById('status').textContent =
             'Status: Calibrating compass... Hold phone steady facing North for 1 second.';
         
         const collectSamples = (event) => {
+            console.log('Collecting sample:', event);
             if (event.alpha !== null && event.beta !== null) {
                 const compassHeading = event.webkitCompassHeading !== undefined ? event.webkitCompassHeading : event.alpha;
                 compassSamples.push(compassHeading);
                 compassSamples.push(event.beta);
+                latestOrientation = event;
             }
         };
 
@@ -116,6 +136,7 @@ function calibrate() {
 
         // Stop sampling after 1 second and average
         setTimeout(() => {
+            console.log('Samples collected:', compassSamples);
             window.removeEventListener('deviceorientation', collectSamples);
             if (compassSamples.length >= 2) {
                 const alphaSamples = compassSamples.filter((_, i) => i % 2 === 0);
@@ -129,7 +150,9 @@ function calibrate() {
                 getLocation();
                 const declination = getMagneticDeclination(targetLongitude);
                 azimuthOffset += declination;
-                handleOrientation(latestOrientation || { alpha: azimuthOffset, beta: altitudeOffset });
+                if (latestOrientation) {
+                    handleOrientation(latestOrientation);
+                }
             } else {
                 document.getElementById('status').textContent =
                     'Status: Not enough data. Hold steady and try again.';
@@ -152,6 +175,7 @@ function calibrate() {
 
 // Handle device orientation
 function handleOrientation(event) {
+    console.log('DeviceOrientation event:', event);
     latestOrientation = event;
 
     const alpha = event.alpha;
@@ -233,25 +257,18 @@ function handleOrientation(event) {
 }
 
 // Setup event listeners
-if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission()
-        .then(response => {
-            if (response === 'granted') {
-                sensorsEnabled = true;
-                window.addEventListener('deviceorientation', handleOrientation);
-                document.getElementById('calibrate-btn').addEventListener('click', calibrate);
-            } else {
-                alert('Sensor permission denied.');
-                document.getElementById('status').textContent =
-                    'Status: Sensor permission denied. Please enable sensors to proceed.';
-            }
-        })
-        .catch(error => {
-            console.error('Permission request error:', error);
-            document.getElementById('status').textContent =
-                'Status: Error enabling sensors. Please try again.';
-        });
-} else {
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing...');
+    const calibrateBtn = document.getElementById('calibrate-btn');
+    if (calibrateBtn) {
+        calibrateBtn.addEventListener('click', calibrate);
+    } else {
+        console.error('Calibrate button not found.');
+    }
+});
+
+// Initialize for non-iOS devices
+if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
+    console.log('No permission required, adding deviceorientation listener...');
     window.addEventListener('deviceorientation', handleOrientation);
-    document.getElementById('calibrate-btn').addEventListener('click', calibrate);
 }
