@@ -5,6 +5,7 @@ let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
 let sensorsEnabled = false; // Track sensor permission state
 let compassSamples = [];    // Store compass readings for averaging
+let latestOrientation = null; // Store latest sensor data
 
 // Request geolocation and update target altitude and longitude
 function getLocation() {
@@ -70,6 +71,10 @@ function getMagneticDeclination(longitude) {
 // Draw polar reticle based on location and time
 function drawPolarReticle() {
     const canvas = document.getElementById('polar-reticle');
+    if (!canvas || !canvas.getContext) {
+        console.error('Canvas not found or unsupported.');
+        return;
+    }
     const ctx = canvas.getContext('2d');
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
@@ -83,7 +88,7 @@ function drawPolarReticle() {
     // Draw concentric circles (36°, 40°, 44° from NCP)
     const degreeToRadius = (deg) => (deg / 44) * radius; // Scale degrees to canvas radius (44° = max)
     ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 0.5; // Thinner for smaller canvas
+    ctx.lineWidth = 0.5;
     [36, 40, 44].forEach(deg => {
         const r = degreeToRadius(deg);
         ctx.beginPath();
@@ -91,7 +96,7 @@ function drawPolarReticle() {
         ctx.stroke();
 
         // Label degrees
-        ctx.font = '8px Arial'; // Smaller font
+        ctx.font = '8px Arial';
         ctx.fillStyle = '#ff0000';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -99,7 +104,7 @@ function drawPolarReticle() {
     });
 
     // Draw hour markings (0-12)
-    ctx.font = '10px Arial'; // Smaller font
+    ctx.font = '10px Arial';
     ctx.fillStyle = '#ff0000';
     for (let hour = 0; hour < 12; hour++) {
         const angle = (hour * 30 - 90) * Math.PI / 180; // 30° per hour, 0 at top
@@ -107,6 +112,18 @@ function drawPolarReticle() {
         const y = centerY + (radius + 5) * Math.sin(angle);
         ctx.fillText(hour.toString(), x, y);
     });
+
+    // Polaris position (using app's LST: 19.638 hours)
+    const lst = 19.638; // From app
+    const positionAngle = lst * 15; // LST in degrees (1 hour = 15°)
+    const polarisOffsetDeg = 0.74; // Polaris distance from NCP (2025)
+    const polarisRadius = degreeToRadius(polarisOffsetDeg);
+    const polarisAngle = (positionAngle - 90) * Math.PI / 180; // Align with LST
+    const polarisX = centerX + polarisRadius * Math.cos(polarisAngle);
+    const polarisY = centerY + polarisRadius * Math.sin(polarisAngle);
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#ffcc00'; // Yellow for Polaris
+    ctx.fillText('*', polarisX, polarisY);
 
     // Draw crosshair at NCP (center)
     ctx.strokeStyle = '#ff0000';
@@ -117,18 +134,15 @@ function drawPolarReticle() {
     ctx.moveTo(centerX, centerY - radius);
     ctx.lineTo(centerX, centerY + radius);
     ctx.stroke();
+}
 
-    // Polaris position (using app's LST: 19.638 hours)
-    const lst = 19.638; // From app
-    const positionAngle = lst * 15; // LST in degrees (1 hour = 15°)
-    const polarisOffsetDeg = 0.74; // Polaris distance from NCP (2025)
-    const polarisRadius = degreeToRadius(polarisOffsetDeg);
-    const polarisAngle = (positionAngle - 90) * Math.PI / 180; // Align with LST
-    const polarisX = centerX + polarisRadius * Math.cos(polarisAngle);
-    const polarisY = centerY + polarisRadius * Math.sin(polarisAngle);
-    ctx.font = '14px Arial'; // Slightly smaller
-    ctx.fillStyle = '#ffcc00'; // Yellow for Polaris
-    ctx.fillText('*', polarisX, polarisY);
+// Show calibration confirmation
+function showCalibrationConfirm() {
+    const confirmOverlay = document.getElementById('calibration-confirm');
+    confirmOverlay.style.display = 'block';
+    setTimeout(() => {
+        confirmOverlay.style.display = 'none';
+    }, 2000);
 }
 
 // Calibration function (averages compass readings)
@@ -207,7 +221,7 @@ function calibrate() {
     }
 }
 
-// Handle device orientation (unchanged)
+// Handle device orientation
 function handleOrientation(event) {
     latestOrientation = event;
 
@@ -298,4 +312,6 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
 }
 
 // Draw reticle on load with default values
-drawPolarReticle();
+document.addEventListener('DOMContentLoaded', () => {
+    drawPolarReticle();
+});
