@@ -2,8 +2,8 @@ let targetAltitude = 37; // Default to 37° if location unavailable
 let azimuthOffset = 0;   // Calibration offset for azimuth (compass North)
 let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
-let latestOrientation = null; // Store latest sensor data
-let sensorsEnabled = false;   // Track sensor permission state
+let sensorsEnabled = false; // Track sensor permission state
+let compassSamples = [];    // Store compass readings for averaging
 
 // Request geolocation and update target altitude
 function getLocation() {
@@ -61,17 +61,16 @@ function showCalibrationConfirm() {
     }, 2000);
 }
 
-// Calibration function (sets offsets using compass, then uses accelerometer)
+// Calibration function (averages compass readings)
 function calibrate() {
     if (!sensorsEnabled && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        // Request permission on first click (iOS)
         DeviceOrientationEvent.requestPermission()
             .then(response => {
                 if (response === 'granted') {
                     sensorsEnabled = true;
                     window.addEventListener('deviceorientation', handleOrientation);
                     document.getElementById('status').textContent =
-                        'Status: Sensors enabled. Move the phone to calibrate.';
+                        'Status: Sensors enabled. Point phone North and hold steady to calibrate.';
                 } else {
                     alert('Sensor permission denied.');
                     document.getElementById('status').textContent =
@@ -83,23 +82,56 @@ function calibrate() {
                 document.getElementById('status').textContent =
                     'Status: Error enabling sensors. Please try again.';
             });
-        return; // Wait for permission before proceeding
+        return;
     }
 
-    // Calibration logic after sensors are enabled
-    if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-        const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? latestOrientation.webkitCompassHeading : latestOrientation.alpha;
-        azimuthOffset = compassHeading; // Compass North reference
-        altitudeOffset = latestOrientation.beta;
-        isCalibrated = true;
-        showCalibrationConfirm();
+    // Start compass sampling
+    if (!isCalibrated) {
+        compassSamples = [];
         document.getElementById('status').textContent =
-            'Status: Calibrated! Point phone North, then align your telescope.';
-        getLocation(); // Fetch location
-        handleOrientation(latestOrientation); // Force immediate UI update
+            'Status: Calibrating compass... Hold phone steady facing North for 1 second.';
+        
+        const collectSamples = (event) => {
+            if (event.alpha !== null && event.beta !== null) {
+                const compassHeading = event.webkitCompassHeading !== undefined ? event.webkitCompassHeading : event.alpha;
+                compassSamples.push(compassHeading);
+                compassSamples.push(event.beta); // Collect beta for altitude averaging too
+            }
+        };
+
+        window.addEventListener('deviceorientation', collectSamples);
+
+        // Stop sampling after 1 second and average
+        setTimeout(() => {
+            window.removeEventListener('deviceorientation', collectSamples);
+            if (compassSamples.length >= 2) { // At least 2 samples (alpha + beta)
+                const alphaSamples = compassSamples.filter((_, i) => i % 2 === 0); // Even indices (compass)
+                const betaSamples = compassSamples.filter((_, i) => i % 2 === 1);  // Odd indices (beta)
+                azimuthOffset = alphaSamples.reduce((sum, val) => sum + val, 0) / alphaSamples.length;
+                altitudeOffset = betaSamples.reduce((sum, val) => sum + val, 0) / betaSamples.length;
+                isCalibrated = true;
+                showCalibrationConfirm();
+                document.getElementById('status').textContent =
+                    'Status: Calibrated! Point phone North, then align your telescope.';
+                getLocation();
+                handleOrientation(latestOrientation || { alpha: azimuthOffset, beta: altitudeOffset }); // Use averaged values if no latest
+            } else {
+                document.getElementById('status').textContent =
+                    'Status: Not enough data. Hold steady and try again.';
+            }
+        }, 1000); // Collect for 1 second
     } else {
-        document.getElementById('status').textContent =
-            'Status: No sensor data yet. Move the phone to calibrate.';
+        // Recalibrate with latest data
+        if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
+            const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? latestOrientation.webkitCompassHeading : latestOrientation.alpha;
+            azimuthOffset = compassHeading;
+            altitudeOffset = latestOrientation.beta;
+            showCalibrationConfirm();
+            document.getElementById('status').textContent =
+                'Status: Recalibrated! Point phone North, then align your telescope.';
+            getLocation();
+            handleOrientation(latestOrientation);
+        }
     }
 }
 
@@ -107,7 +139,7 @@ function calibrate() {
 function handleOrientation(event) {
     latestOrientation = event; // Store latest event data
 
-    const alpha = event.alpha; // Gyro-based orientation (0° = North when calibrated)
+    const alpha = event.alpha; // Gyro-based orientation
     const beta = event.beta;   // Front-back tilt (-90° to 90°)
     const gamma = event.gamma; // Left-right tilt (-90° to 90°)
 
@@ -117,7 +149,7 @@ function handleOrientation(event) {
         return;
     }
 
-    // Use alpha adjusted by compass offset for real-time azimuth
+    // Use alpha adjusted by averaged compass offset for real-time azimuth
     let azimuth = isCalibrated ? alpha - azimuthOffset : alpha;
 
     // Normalize azimuth to -180° to 180°
