@@ -72,8 +72,8 @@ function getMagneticDeclination(longitude) {
 function drawPolarReticle() {
     console.log('Drawing polar reticle...');
     const canvas = document.getElementById('polar-reticle');
-    if (!canvas || !canvas.getContext) {
-        console.error('Canvas not found or unsupported.');
+    if (!canvas) {
+        console.error('Canvas element not found.');
         return;
     }
     const ctx = canvas.getContext('2d');
@@ -81,6 +81,7 @@ function drawPolarReticle() {
         console.error('Failed to get 2D context for canvas.');
         return;
     }
+
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const radius = Math.min(centerX, centerY) - 10;
@@ -90,10 +91,15 @@ function drawPolarReticle() {
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw concentric circles (36°, 40°, 44° from NCP)
-    const degreeToRadius = (deg) => (deg / 44) * radius;
+    // Draw a simple circle to test rendering
     ctx.strokeStyle = '#ff0000';
     ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    // Draw concentric circles (36°, 40°, 44° from NCP)
+    const degreeToRadius = (deg) => (deg / 44) * radius;
     [36, 40, 44].forEach(deg => {
         const r = degreeToRadius(deg);
         ctx.beginPath();
@@ -230,12 +236,20 @@ function startCalibration() {
             } else {
                 document.getElementById('status').textContent =
                     'Status: Not enough data. Hold steady and try again.';
+                // Retry after 5 seconds if no data
+                setTimeout(() => {
+                    if (!isCalibrated) {
+                        document.getElementById('status').textContent =
+                            'Status: Retrying calibration... Please move the phone.';
+                        startCalibration();
+                    }
+                }, 5000);
             }
         }, 1000);
     } else {
         // Recalibrate with latest data
         if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-            const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? event.webkitCompassHeading : latestOrientation.alpha;
+            const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? latestOrientation.webkitCompassHeading : latestOrientation.alpha;
             azimuthOffset = compassHeading + getMagneticDeclination(targetLongitude);
             altitudeOffset = latestOrientation.beta;
             showCalibrationConfirm();
