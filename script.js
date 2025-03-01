@@ -60,22 +60,27 @@ function getLocation() {
 
 // Simple declination approximation based on longitude (2025 estimate)
 function getMagneticDeclination(longitude) {
-    if (longitude > -30 && longitude < 30) return 0; // Near Greenwich, ~0°
-    if (longitude >= 30 && longitude < 90) return 5; // Eastern Europe/Asia, ~5°E
-    if (longitude >= 90 && longitude < 180) return 10; // Far East, ~10°E
-    if (longitude <= -30 && longitude > -90) return -10; // Eastern US, ~10°W
-    if (longitude <= -90 && longitude > -180) return -15; // Western US, ~15°W
-    return 0; // Default if longitude unavailable
+    if (longitude > -30 && longitude < 30) return 0;
+    if (longitude >= 30 && longitude < 90) return 5;
+    if (longitude >= 90 && longitude < 180) return 10;
+    if (longitude <= -30 && longitude > -90) return -10;
+    if (longitude <= -90 && longitude > -180) return -15;
+    return 0;
 }
 
-// Draw polar reticle based on location and time
+// Draw polar reticle based on location and time (simplified)
 function drawPolarReticle() {
+    console.log('Drawing polar reticle...');
     const canvas = document.getElementById('polar-reticle');
     if (!canvas || !canvas.getContext) {
         console.error('Canvas not found or unsupported.');
         return;
     }
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error('Failed to get 2D context for canvas.');
+        return;
+    }
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const radius = Math.min(centerX, centerY) - 10;
@@ -91,7 +96,7 @@ function drawPolarReticle() {
     ctx.lineWidth = 0.5;
     [36, 40, 44].forEach(deg => {
         const r = degreeToRadius(deg);
-       .ctx.beginPath();
+        ctx.beginPath();
         ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
         ctx.stroke();
 
@@ -153,6 +158,7 @@ function showCalibrationConfirm() {
 function calibrate() {
     console.log('Calibrate button clicked. Sensors enabled:', sensorsEnabled);
 
+    // Request permission if needed
     if (!sensorsEnabled && typeof DeviceOrientationEvent.requestPermission === 'function') {
         console.log('Requesting sensor permission...');
         DeviceOrientationEvent.requestPermission()
@@ -160,10 +166,12 @@ function calibrate() {
                 console.log('Permission response:', response);
                 if (response === 'granted') {
                     sensorsEnabled = true;
-                    console.log('Sensors enabled. Waiting for first deviceorientation event...');
+                    console.log('Sensors enabled. Waiting for deviceorientation event...');
+                    window.addEventListener('deviceorientation', handleOrientation);
                     document.getElementById('status').textContent =
                         'Status: Sensors enabled. Point phone North and hold steady to calibrate.';
-                    window.addEventListener('deviceorientation', handleOrientation);
+                    // Start calibration immediately
+                    startCalibration();
                 } else {
                     alert('Sensor permission denied.');
                     document.getElementById('status').textContent =
@@ -175,10 +183,14 @@ function calibrate() {
                 document.getElementById('status').textContent =
                     'Status: Error enabling sensors. Please try again.';
             });
-        return;
+    } else {
+        // For non-iOS or if sensors are already enabled
+        startCalibration();
     }
+}
 
-    // Start compass sampling
+// Start the calibration process
+function startCalibration() {
     if (!isCalibrated) {
         compassSamples = [];
         document.getElementById('status').textContent =
@@ -223,7 +235,7 @@ function calibrate() {
     } else {
         // Recalibrate with latest data
         if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
-            const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? latestOrientation.webkitCompassHeading : latestOrientation.alpha;
+            const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? event.webkitCompassHeading : latestOrientation.alpha;
             azimuthOffset = compassHeading + getMagneticDeclination(targetLongitude);
             altitudeOffset = latestOrientation.beta;
             showCalibrationConfirm();
@@ -320,6 +332,7 @@ function handleOrientation(event) {
 
 // Setup event listeners
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing...');
     drawPolarReticle();
     const calibrateBtn = document.getElementById('calibrate-btn');
     if (calibrateBtn) {
@@ -331,5 +344,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initialize for non-iOS devices
 if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
+    console.log('No permission required, adding deviceorientation listener...');
     window.addEventListener('deviceorientation', handleOrientation);
 }
