@@ -1,16 +1,18 @@
 let targetAltitude = 37; // Default to 37° if location unavailable
+let targetLongitude = 0; // Default longitude for declination
 let azimuthOffset = 0;   // Calibration offset for azimuth (compass North)
 let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
 let sensorsEnabled = false; // Track sensor permission state
 let compassSamples = [];    // Store compass readings for averaging
 
-// Request geolocation and update target altitude
+// Request geolocation and update target altitude and longitude
 function getLocation() {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             position => {
                 const latitude = position.coords.latitude;
+                targetLongitude = position.coords.longitude; // Store longitude for declination
                 if (latitude >= 0) {
                     targetAltitude = latitude; // Northern Hemisphere
                 } else {
@@ -21,7 +23,7 @@ function getLocation() {
                 document.getElementById('instructions').textContent =
                     `Place your phone flat on the telescope. (Latitude: ${latitude.toFixed(2)}°)`;
                 document.getElementById('status').textContent =
-                    `Status: Location set to ${latitude.toFixed(2)}°.`;
+                    `Status: Location set to ${latitude.toFixed(2)}°, ${targetLongitude.toFixed(2)}°.`;
             },
             error => {
                 console.error('Geolocation error:', error);
@@ -50,6 +52,18 @@ function getLocation() {
         document.getElementById('instructions').textContent =
             'Place your phone flat on the telescope. (Default: 37°)';
     }
+}
+
+// Simple declination approximation based on longitude (2025 estimate)
+function getMagneticDeclination(longitude) {
+    // Rough model: Declination varies by longitude (simplified, not precise)
+    // Positive = East declination, Negative = West declination
+    if (longitude > -30 && longitude < 30) return 0; // Near Greenwich, ~0°
+    if (longitude >= 30 && longitude < 90) return 5; // Eastern Europe/Asia, ~5°E
+    if (longitude >= 90 && longitude < 180) return 10; // Far East, ~10°E
+    if (longitude <= -30 && longitude > -90) return -10; // Eastern US, ~10°W
+    if (longitude <= -90 && longitude > -180) return -15; // Western US, ~15°W
+    return 0; // Default if longitude unavailable
 }
 
 // Show calibration confirmation
@@ -114,7 +128,9 @@ function calibrate() {
                 document.getElementById('status').textContent =
                     'Status: Calibrated! Point phone North, then align your telescope.';
                 getLocation();
-                handleOrientation(latestOrientation || { alpha: azimuthOffset, beta: altitudeOffset }); // Use averaged values if no latest
+                const declination = getMagneticDeclination(targetLongitude);
+                azimuthOffset += declination; // Adjust for true North
+                handleOrientation(latestOrientation || { alpha: azimuthOffset, beta: altitudeOffset });
             } else {
                 document.getElementById('status').textContent =
                     'Status: Not enough data. Hold steady and try again.';
@@ -124,7 +140,7 @@ function calibrate() {
         // Recalibrate with latest data
         if (latestOrientation && latestOrientation.alpha !== null && latestOrientation.beta !== null) {
             const compassHeading = latestOrientation.webkitCompassHeading !== undefined ? latestOrientation.webkitCompassHeading : latestOrientation.alpha;
-            azimuthOffset = compassHeading;
+            azimuthOffset = compassHeading + getMagneticDeclination(targetLongitude); // Adjust for true North
             altitudeOffset = latestOrientation.beta;
             showCalibrationConfirm();
             document.getElementById('status').textContent =
@@ -149,7 +165,7 @@ function handleOrientation(event) {
         return;
     }
 
-    // Use alpha adjusted by averaged compass offset for real-time azimuth
+    // Use alpha adjusted by compass offset (including declination) for real-time azimuth
     let azimuth = isCalibrated ? alpha - azimuthOffset : alpha;
 
     // Normalize azimuth to -180° to 180°
