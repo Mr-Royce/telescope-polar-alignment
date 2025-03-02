@@ -153,3 +153,30 @@ if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     document.getElementById('calibrate-btn').addEventListener('click', calibrate);
     document.addEventListener('DOMContentLoaded', drawPolarReticle);
 }
+
+function drawPolarReticle() {
+    const canvas = document.getElementById('polar-reticle');
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(centerX, centerY) - 10;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.font = '10px Arial';
+    ctx.fillStyle = '#ff0000';
+    for (let hour = 0; hour < 12; hour++) {
+        const angle = (hour * 30 - 90) * Math.PI / 180;
+        const x = centerX + (radius + 5) * Math.cos(angle);
+        const y = centerY + (radius + 5) * Math.sin(angle);
+        ctx.fillText(hour.toString(), x, y);
+    }
+}
