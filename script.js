@@ -1,6 +1,6 @@
 let targetAltitude = 37; // Default to 37° if location unavailable
 let targetLongitude = 0; // Default longitude for declination
-let azimuthOffset = 0;   // Calibration offset for azimuth
+let azimuthOffset = 0;   // Calibration offset for azimuth (compass North)
 let altitudeOffset = 0;  // Calibration offset for altitude
 let isCalibrated = false;
 let sensorsEnabled = false; // Track sensor permission state
@@ -14,7 +14,7 @@ function getLocation() {
         navigator.geolocation.getCurrentPosition(
             position => {
                 const latitude = position.coords.latitude;
-                targetLongitude = position.coords.longitude;
+                targetLongitude = position.coords.longitude; // Store longitude for declination
                 if (latitude >= 0) {
                     targetAltitude = latitude; // Northern Hemisphere
                 } else {
@@ -26,7 +26,6 @@ function getLocation() {
                     `Place your phone flat on the telescope. (Latitude: ${latitude.toFixed(2)}°)`;
                 document.getElementById('status').textContent =
                     `Status: Location set to ${latitude.toFixed(2)}°, ${targetLongitude.toFixed(2)}°.`;
-                drawPolarReticle(); // Update reticle with new location
             },
             error => {
                 console.error('Geolocation error:', error);
@@ -47,7 +46,6 @@ function getLocation() {
                 document.getElementById('status').textContent = errorMessage;
                 document.getElementById('instructions').textContent =
                     'Place your phone flat on the telescope. (Default: 37°)';
-                drawPolarReticle();
             }
         );
     } else {
@@ -55,7 +53,6 @@ function getLocation() {
             'Status: Geolocation not supported. Using default 37°.';
         document.getElementById('instructions').textContent =
             'Place your phone flat on the telescope. (Default: 37°)';
-        drawPolarReticle();
     }
 }
 
@@ -67,78 +64,6 @@ function getMagneticDeclination(longitude) {
     if (longitude <= -30 && longitude > -90) return -10;
     if (longitude <= -90 && longitude > -180) return -15;
     return 0;
-}
-
-// Draw polar reticle based on location and time
-function drawPolarReticle() {
-    console.log('Drawing polar reticle...');
-    const canvas = document.getElementById('polar-reticle');
-    if (!canvas) {
-        console.error('Canvas element not found.');
-        return;
-    }
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        console.error('Failed to get 2D context for canvas.');
-        return;
-    }
-
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) - 10;
-
-    // Clear canvas with transparent background
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw concentric circles (36°, 40°, 44° from NCP)
-    const degreeToRadius = (deg) => (deg / 44) * radius;
-    ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 0.5;
-    [36, 40, 44].forEach(deg => {
-        const r = degreeToRadius(deg);
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
-        ctx.stroke();
-
-        // Label degrees
-        ctx.font = '8px Arial';
-        ctx.fillStyle = '#ff0000';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(`${deg}°`, centerX + r + 10, centerY);
-    });
-
-    // Draw hour markings (0-12)
-    ctx.font = '10px Arial';
-    ctx.fillStyle = '#ff0000';
-    for (let hour = 0; hour < 12; hour++) {
-        const angle = (hour * 30 - 90) * Math.PI / 180;
-        const x = centerX + (radius + 5) * Math.cos(angle);
-        const y = centerY + (radius + 5) * Math.sin(angle);
-        ctx.fillText(hour.toString(), x, y);
-    });
-
-    // Polaris position (using app's LST: 19.638 hours, NCP distance: 37.0' = 0.617°)
-    const lst = 19.638; // From screenshot
-    const positionAngle = lst * 15; // Convert hours to degrees (1 hour = 15°)
-    const polarisOffsetDeg = 0.617; // Updated to match app's 37.0' (37/60 = 0.617°)
-    const polarisRadius = degreeToRadius(polarisOffsetDeg);
-    const polarisAngle = (positionAngle - 90) * Math.PI / 180;
-    const polarisX = centerX + polarisRadius * Math.cos(polarisAngle);
-    const polarisY = centerY + polarisRadius * Math.sin(polarisAngle);
-    ctx.font = '14px Arial';
-    ctx.fillStyle = '#ffcc00';
-    ctx.fillText('*', polarisX, polarisY);
-
-    // Draw crosshair at NCP (center)
-    ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(centerX - radius, centerY);
-    ctx.lineTo(centerX + radius, centerY);
-    ctx.moveTo(centerX, centerY - radius);
-    ctx.lineTo(centerX, centerY + radius);
-    ctx.stroke();
 }
 
 // Show calibration confirmation
@@ -343,7 +268,6 @@ function handleOrientation(event) {
 // Setup event listeners
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing...');
-    drawPolarReticle();
     const calibrateBtn = document.getElementById('calibrate-btn');
     if (calibrateBtn) {
         calibrateBtn.addEventListener('click', calibrate);
