@@ -234,6 +234,14 @@ function startCalibration() {
             } else {
                 document.getElementById('status').textContent =
                     'Status: Not enough data. Hold steady and try again.';
+                // Retry after 5 seconds if no data
+                setTimeout(() => {
+                    if (!isCalibrated) {
+                        document.getElementById('status').textContent =
+                            'Status: Retrying calibration... Please move the phone.';
+                        startCalibration();
+                    }
+                }, 5000);
             }
         }, 1000);
     } else {
