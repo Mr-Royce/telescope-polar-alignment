@@ -165,11 +165,18 @@ function drawPolarReticle() {
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    const degreeToRadius = (deg) => (deg / 44) * radius;
     ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.stroke();
+    ctx.lineWidth = 0.5;
+    [36, 40, 44].forEach(deg => {
+        const r = degreeToRadius(deg);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.font = '8px Arial';
+        ctx.fillStyle = '#ff0000';
+        ctx.fillText(`${deg}°`, centerX + r + 10, centerY);
+    });
 
     ctx.font = '10px Arial';
     ctx.fillStyle = '#ff0000';
@@ -179,4 +186,24 @@ function drawPolarReticle() {
         const y = centerY + (radius + 5) * Math.sin(angle);
         ctx.fillText(hour.toString(), x, y);
     }
+
+    const lst = 19.638; // From screenshot
+    const positionAngle = lst * 15;
+    const polarisOffsetDeg = 0.74; // Approx offset from NCP
+    const polarisRadius = degreeToRadius(polarisOffsetDeg);
+    const polarisAngle = (positionAngle - 90) * Math.PI / 180;
+    const polarisX = centerX + polarisRadius * Math.cos(polarisAngle);
+    const polarisY = centerY + polarisRadius * Math.sin(polarisAngle);
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillText('*', polarisX, polarisY);
+
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(centerX - radius, centerY);
+    ctx.lineTo(centerX + radius, centerY);
+    ctx.moveTo(centerX, centerY - radius);
+    ctx.lineTo(centerX, centerY + radius);
+    ctx.stroke();
 }
