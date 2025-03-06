@@ -94,12 +94,12 @@ h1 {
 
 #reticle.zoomed .crosshair.vertical,
 #reticle.zoomed .target-vertical {
-    width: 1.5px;
+    width: .25px;
 }
 
 #reticle.zoomed .crosshair.horizontal,
 #reticle.zoomed .target-horizontal {
-    height: 1.5px;
+    height: .25px;
 }
 
 #bottom-text {
